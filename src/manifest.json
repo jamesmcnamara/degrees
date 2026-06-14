@@ -1,0 +1,19 @@
+{
+  "name": "Six Degrees",
+  "short_name": "Six Degrees",
+  "description": "Find the connection between two movies via shared actors.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1f2430",
+  "theme_color": "#1f2430",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

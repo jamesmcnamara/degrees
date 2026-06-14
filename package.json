@@ -1,0 +1,23 @@
+{
+  "name": "six-degrees",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --hot src/index.ts",
+    "build": "bun build ./src/index.html --outdir=dist --sourcemap --target=browser --minify --define:process.env.NODE_ENV='\"production\"' --env='BUN_PUBLIC_*'",
+    "start": "NODE_ENV=production bun src/index.ts"
+  },
+  "dependencies": {
+    "cytoscape": "^3.34.0",
+    "react": "^19",
+    "react-dom": "^19",
+    "wouter": "^3.10.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/cytoscape": "^3.31.0",
+    "@types/react": "^19",
+    "@types/react-dom": "^19"
+  }
+}
