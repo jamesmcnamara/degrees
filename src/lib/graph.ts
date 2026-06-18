@@ -6,27 +6,27 @@
  * when they share an actor.
  */
 
-import type { Appearance, EntityKind, GraphData, Id } from "./types";
-import { newId } from "./id";
+import type { EntityKind, GraphData, Id } from './types';
+import { newId } from './id';
 
 export const emptyGraph = (): GraphData => ({
   movies: {},
   actors: {},
-  appearances: [],
+  appearances: []
 });
 
 const collection = (data: GraphData, kind: EntityKind) =>
-  kind === "movie" ? data.movies : data.actors;
+  kind === 'movie' ? data.movies : data.actors;
 
 /** Look up an existing entity of `kind` by case-insensitive name. */
 export const findByName = (
   data: GraphData,
   kind: EntityKind,
-  name: string,
+  name: string
 ): Id | undefined => {
   const target = name.trim().toLowerCase();
   return Object.values(collection(data, kind)).find(
-    (e) => e.name.toLowerCase() === target,
+    (e) => e.name.toLowerCase() === target
   )?.id;
 };
 
@@ -34,17 +34,17 @@ export const findByName = (
 export const upsertEntity = (
   data: GraphData,
   kind: EntityKind,
-  name: string,
+  name: string
 ): [GraphData, Id] => {
   const trimmed = name.trim();
   const existing = findByName(data, kind, trimmed);
   if (existing) return [data, existing];
 
   const id = newId();
-  const key = kind === "movie" ? "movies" : "actors";
+  const key = kind === 'movie' ? 'movies' : 'actors';
   return [
     { ...data, [key]: { ...data[key], [id]: { id, name: trimmed } } },
-    id,
+    id
   ];
 };
 
@@ -53,27 +53,30 @@ export const renameEntity = (
   data: GraphData,
   kind: EntityKind,
   id: Id,
-  name: string,
+  name: string
 ): GraphData => {
-  const key = kind === "movie" ? "movies" : "actors";
+  const key = kind === 'movie' ? 'movies' : 'actors';
   const entity = data[key][id];
   if (!entity) return data;
-  return { ...data, [key]: { ...data[key], [id]: { ...entity, name: name.trim() } } };
+  return {
+    ...data,
+    [key]: { ...data[key], [id]: { ...entity, name: name.trim() } }
+  };
 };
 
 /** Remove an entity and any appearances that reference it. */
 export const deleteEntity = (
   data: GraphData,
   kind: EntityKind,
-  id: Id,
+  id: Id
 ): GraphData => {
-  const key = kind === "movie" ? "movies" : "actors";
+  const key = kind === 'movie' ? 'movies' : 'actors';
   const { [id]: _removed, ...rest } = data[key];
-  const field = kind === "movie" ? "movieId" : "actorId";
+  const field = kind === 'movie' ? 'movieId' : 'actorId';
   return {
     ...data,
     [key]: rest,
-    appearances: data.appearances.filter((a) => a[field] !== id),
+    appearances: data.appearances.filter((a) => a[field] !== id)
   };
 };
 
@@ -84,7 +87,7 @@ const hasAppearance = (data: GraphData, movieId: Id, actorId: Id) =>
 export const linkAppearance = (
   data: GraphData,
   movieId: Id,
-  actorId: Id,
+  actorId: Id
 ): GraphData =>
   hasAppearance(data, movieId, actorId)
     ? data
@@ -94,21 +97,17 @@ export const linkAppearance = (
 export const unlinkAppearance = (
   data: GraphData,
   movieId: Id,
-  actorId: Id,
+  actorId: Id
 ): GraphData => ({
   ...data,
   appearances: data.appearances.filter(
-    (a) => !(a.movieId === movieId && a.actorId === actorId),
-  ),
+    (a) => !(a.movieId === movieId && a.actorId === actorId)
+  )
 });
 
 /** Ids of entities linked to `id` (the opposite kind). */
-export const relatedIds = (
-  data: GraphData,
-  kind: EntityKind,
-  id: Id,
-): Id[] =>
-  kind === "movie"
+export const relatedIds = (data: GraphData, kind: EntityKind, id: Id): Id[] =>
+  kind === 'movie'
     ? data.appearances.filter((a) => a.movieId === id).map((a) => a.actorId)
     : data.appearances.filter((a) => a.actorId === id).map((a) => a.movieId);
 
@@ -180,7 +179,7 @@ export interface PathResult {
 export const shortestPath = (
   data: GraphData,
   startMovie: Id,
-  endMovie: Id,
+  endMovie: Id
 ): PathResult | null => {
   if (startMovie === endMovie) return { movies: [startMovie], actors: [] };
 
@@ -209,7 +208,7 @@ export const shortestPath = (
 const reconstruct = (
   prev: Map<Id, { movie: Id; actor: Id }>,
   start: Id,
-  end: Id,
+  end: Id
 ): PathResult => {
   const movies: Id[] = [end];
   const actors: Id[] = [];

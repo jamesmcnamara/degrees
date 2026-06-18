@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "bun --hot src/index.ts",
+    "cert": "bash scripts/gen-cert.sh",
     "build": "bun build ./src/index.html --outdir=dist --sourcemap --target=browser --minify --define:process.env.NODE_ENV='\"production\"' --env='BUN_PUBLIC_*'",
     "start": "NODE_ENV=production bun src/index.ts"
   },
@@ -16,7 +17,6 @@
   },
   "devDependencies": {
     "@types/bun": "latest",
-    "@types/cytoscape": "^3.31.0",
     "@types/react": "^19",
     "@types/react-dom": "^19"
   }

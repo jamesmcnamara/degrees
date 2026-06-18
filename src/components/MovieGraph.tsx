@@ -14,7 +14,7 @@ interface MovieGraphProps {
   onSelectMovie?: (id: Id) => void;
 }
 
-const STYLE: cytoscape.Stylesheet[] = [
+const STYLE: cytoscape.StylesheetJson = [
   {
     selector: "node",
     style: {

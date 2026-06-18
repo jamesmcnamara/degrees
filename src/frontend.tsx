@@ -18,7 +18,7 @@ const head = (rel: string, href: string, extra: Record<string, string> = {}) => 
 };
 head("manifest", "/manifest.json");
 head("icon", "/icon.svg", { type: "image/svg+xml" });
-head("apple-touch-icon", "/icon.svg");
+head("apple-touch-icon", "/icon-192.png");
 
 const elem = document.getElementById("root")!;
 const app = (
@@ -34,10 +34,31 @@ if (import.meta.hot) {
   createRoot(elem).render(app);
 }
 
-if (process.env.NODE_ENV === "production" && "serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch(() => {
-      /* offline support is best-effort */
-    });
+// Register the service worker so the app loads offline after the first visit.
+// Registered in every environment (dev included) so installing the PWA from a
+// LAN dev server still works offline.
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", async () => {
+    try {
+      await navigator.serviceWorker.register("/sw.js");
+    } catch {
+      return; // offline support is best-effort
+    }
+
+    // Once a service worker controls the page, hand it the list of same-origin
+    // resources we just loaded so it can precache them. This guarantees the app
+    // boots fully offline next time, even if the install-time HTML scan missed
+    // an asset (e.g. dynamically loaded chunks, fonts, icons).
+    const precacheLoaded = () => {
+      const ctrl = navigator.serviceWorker.controller;
+      if (!ctrl) return;
+      const urls = [location.href, ...performance.getEntriesByType("resource").map((e) => e.name)].filter(
+        (u) => new URL(u, location.origin).origin === location.origin,
+      );
+      ctrl.postMessage({ type: "cache-urls", urls });
+    };
+
+    precacheLoaded();
+    navigator.serviceWorker.addEventListener("controllerchange", precacheLoaded);
   });
 }
