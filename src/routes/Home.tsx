@@ -1,18 +1,18 @@
 /** Landing screen: jump into the game or manage movies and actors. */
 
-import { Link, useLocation } from "wouter";
-import type { EntityKind } from "@/lib/types";
-import { ENTITY_CONFIG } from "@/lib/entityConfig";
-import * as store from "@/lib/store";
-import { useGraph } from "@/lib/store";
+import { Link, useLocation } from 'wouter';
+import type { EntityKind } from '@/lib/types';
+import { ENTITY_CONFIG } from '@/lib/entityConfig';
+import * as store from '@/lib/store';
+import { useGraph } from '@/lib/store';
 
 export function Home() {
   const data = useGraph();
   const movies = Object.values(data.movies).sort((a, b) =>
-    a.name.localeCompare(b.name),
+    normalize(a.name).localeCompare(normalize(b.name))
   );
   const actors = Object.values(data.actors).sort((a, b) =>
-    a.name.localeCompare(b.name),
+    normalize(a.name).localeCompare(normalize(b.name))
   );
 
   return (
@@ -27,13 +27,12 @@ export function Home() {
   );
 }
 
-function EntityList({
-  kind,
-  entities,
-}: {
+interface EntityListProps {
   kind: EntityKind;
   entities: { id: string; name: string }[];
-}) {
+}
+
+function EntityList({ kind, entities }: EntityListProps) {
   const [, navigate] = useLocation();
   const config = ENTITY_CONFIG[kind];
 
@@ -43,7 +42,7 @@ function EntityList({
         <h2>
           {config.noun}s <span className="muted">({entities.length})</span>
         </h2>
-        <Link href={config.path("new")} className="btn btn--small">
+        <Link href={config.path('new')} className="btn btn--small">
           + Add
         </Link>
       </header>
@@ -75,3 +74,9 @@ function EntityList({
     </section>
   );
 }
+
+const normalize = (s: string) =>
+  s
+    .trim()
+    .toLowerCase()
+    .replace(/^the\s+/, '');

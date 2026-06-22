@@ -6,8 +6,20 @@
  * when they share an actor.
  */
 
-import type { EntityKind, GraphData, Id } from './types';
+import type { Appearance, Entity, EntityKind, GraphData, Id } from './types';
 import { newId } from './id';
+import {
+  concat,
+  cons,
+  filter,
+  findBy,
+  map,
+  mod,
+  not,
+  set,
+  some,
+  updateAll
+} from 'shades';
 
 export const emptyGraph = (): GraphData => ({
   movies: {},
@@ -22,8 +34,9 @@ const collection = (data: GraphData, kind: EntityKind) =>
 export const findByName = (
   data: GraphData,
   kind: EntityKind,
-  name: string
+  name?: string
 ): Id | undefined => {
+  if (!name) return undefined;
   const target = name.trim().toLowerCase();
   return Object.values(collection(data, kind)).find(
     (e) => e.name.toLowerCase() === target
@@ -34,18 +47,15 @@ export const findByName = (
 export const upsertEntity = (
   data: GraphData,
   kind: EntityKind,
-  name: string
+  rawName: string
 ): [GraphData, Id] => {
-  const trimmed = name.trim();
-  const existing = findByName(data, kind, trimmed);
+  const name = rawName.trim();
+  const existing = findByName(data, kind, name);
   if (existing) return [data, existing];
 
   const id = newId();
   const key = kind === 'movie' ? 'movies' : 'actors';
-  return [
-    { ...data, [key]: { ...data[key], [id]: { id, name: trimmed } } },
-    id
-  ];
+  return [set(key, id)({ id, name })(data), id];
 };
 
 /** Rename an existing entity. */
@@ -58,10 +68,7 @@ export const renameEntity = (
   const key = kind === 'movie' ? 'movies' : 'actors';
   const entity = data[key][id];
   if (!entity) return data;
-  return {
-    ...data,
-    [key]: { ...data[key], [id]: { ...entity, name: name.trim() } }
-  };
+  return set(key, id, 'name')(name.trim())(data);
 };
 
 /** Remove an entity and any appearances that reference it. */
@@ -72,16 +79,66 @@ export const deleteEntity = (
 ): GraphData => {
   const key = kind === 'movie' ? 'movies' : 'actors';
   const { [id]: _removed, ...rest } = data[key];
-  const field = kind === 'movie' ? 'movieId' : 'actorId';
-  return {
-    ...data,
-    [key]: rest,
-    appearances: data.appearances.filter((a) => a[field] !== id)
-  };
+  const matcher = kind === 'movie' ? { movieId: id } : { actorId: id };
+
+  return updateAll<GraphData>(
+    set(key)(rest),
+    mod('appearances')(filter(not(matcher)))
+  )(data);
 };
 
-const hasAppearance = (data: GraphData, movieId: Id, actorId: Id) =>
-  data.appearances.some((a) => a.movieId === movieId && a.actorId === actorId);
+export const mergeGraphs = (fst: GraphData, snd: GraphData): GraphData => {
+  let merged = {
+    movies: mergeMaps(fst.movies, snd.movies),
+    actors: mergeMaps(fst.actors, snd.actors),
+    appearances: fst.appearances
+  };
+  merged = mergeAppearances(merged, snd);
+  return merged;
+};
+
+const mergeMaps = (
+  fst: Record<string, Entity>,
+  snd: Record<string, Entity>
+): Record<string, Entity> => {
+  const out = { ...fst };
+  const flipped = Object.fromEntries(
+    Object.entries(fst).map(([id, entity]) => [normalize(entity.name), entity])
+  );
+  for (const entity of Object.values(snd)) {
+    const existing = flipped[normalize(entity.name)];
+    if (!existing) {
+      out[entity.id] = entity;
+    }
+  }
+  return out;
+};
+
+const normalize = (s: string): string => s.toLowerCase().trim();
+
+const mergeAppearances = (merged: GraphData, toMerge: GraphData) => {
+  for (const appearance of toMerge.appearances) {
+    const movie = toMerge.movies[appearance.movieId]!.name;
+    const actor = toMerge.actors[appearance.actorId]!.name;
+    merged = linkAppearanceByName(merged, movie, actor);
+  }
+  return merged;
+};
+
+const hasAppearance = (data: GraphData, movieId?: Id, actorId?: Id) =>
+  some({ movieId, actorId })(data.appearances);
+
+export const hasAppearanceByName = (
+  data: GraphData,
+  movie?: string,
+  actor?: string
+) => {
+  return hasAppearance(
+    data,
+    findByName(data, 'movie', movie),
+    findByName(data, 'actor', actor)
+  );
+};
 
 /** Connect a movie and an actor (no-op if already connected). */
 export const linkAppearance = (
@@ -91,25 +148,31 @@ export const linkAppearance = (
 ): GraphData =>
   hasAppearance(data, movieId, actorId)
     ? data
-    : { ...data, appearances: [...data.appearances, { movieId, actorId }] };
+    : mod('appearances')(cons({ movieId, actorId }))(data);
+
+export const linkAppearanceByName = (
+  data: GraphData,
+  movie: string,
+  actor: string
+) => {
+  const movieId = findByName(data, 'movie', movie);
+  const actorId = findByName(data, 'actor', actor);
+  if (movieId && actorId) return linkAppearance(data, movieId, actorId);
+  return data;
+};
 
 /** Remove the edge between a movie and an actor. */
 export const unlinkAppearance = (
   data: GraphData,
   movieId: Id,
   actorId: Id
-): GraphData => ({
-  ...data,
-  appearances: data.appearances.filter(
-    (a) => !(a.movieId === movieId && a.actorId === actorId)
-  )
-});
+): GraphData => mod('appearances')(filter(not({ movieId, actorId })))(data);
 
 /** Ids of entities linked to `id` (the opposite kind). */
 export const relatedIds = (data: GraphData, kind: EntityKind, id: Id): Id[] =>
   kind === 'movie'
-    ? data.appearances.filter((a) => a.movieId === id).map((a) => a.actorId)
-    : data.appearances.filter((a) => a.actorId === id).map((a) => a.movieId);
+    ? map('actorId')(filter({ movieId: id })(data.appearances))
+    : map('movieId')(filter({ actorId: id })(data.appearances));
 
 // ---------------------------------------------------------------------------
 // Movie projection + pathfinding
