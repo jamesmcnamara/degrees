@@ -4,39 +4,42 @@
  * path is highlighted in the Cytoscape view and listed as an actor chain.
  */
 
-import { useMemo, useState } from "react";
-import { useLocation } from "wouter";
-import type { Id } from "@/lib/types";
-import { shortestPath } from "@/lib/graph";
-import { localSource, type Suggestion } from "@/lib/suggestions";
-import { useGraph } from "@/lib/store";
-import { Autocomplete } from "@/components/Autocomplete";
-import { MovieGraph } from "@/components/MovieGraph";
+import { useMemo, useState } from 'react';
+import { useLocation } from 'wouter';
+import type { Id } from '@/lib/types';
+import {
+  localSource,
+  type Suggestion,
+  type SuggestionSource
+} from '@/lib/suggestions';
+import { useGraph } from '@/lib/store';
+import { Autocomplete } from '@/components/Autocomplete';
+import { MovieGraph } from '@/components/MovieGraph';
+import type { Graph, PathResult } from '@/lib/graph';
 
 export function GraphView() {
-  const data = useGraph();
+  const graph = useGraph();
   const [, navigate] = useLocation();
   const [start, setStart] = useState<Id | null>(null);
   const [end, setEnd] = useState<Id | null>(null);
 
   const startSource = useMemo(
-    () => localSource(data, "movie", new Set([end].filter(Boolean) as Id[])),
-    [data, end],
+    () => localSource(graph, 'movie', new Set([end].filter(Boolean) as Id[])),
+    [graph, end]
   );
   const endSource = useMemo(
-    () => localSource(data, "movie", new Set([start].filter(Boolean) as Id[])),
-    [data, start],
+    () => localSource(graph, 'movie', new Set([start].filter(Boolean) as Id[])),
+    [graph, start]
   );
 
   const path = useMemo(
-    () => (start && end ? shortestPath(data, start, end) : null),
-    [data, start, end],
+    () => (start && end ? graph.shortestPath(start, end) : null),
+    [graph, start, end]
   );
 
-  const pickInto =
-    (setter: (id: Id | null) => void) => (s: Suggestion) => {
-      if (s.id) setter(s.id);
-    };
+  const pickInto = (setter: (id: Id | null) => void) => (s: Suggestion) => {
+    if (s.id) setter(s.id);
+  };
 
   return (
     <div className="graph-view">
@@ -44,7 +47,7 @@ export function GraphView() {
         <MoviePicker
           label="Start"
           movieId={start}
-          name={start ? data.movies[start]?.name : undefined}
+          name={start ? graph.movies[start]?.name : undefined}
           source={startSource}
           onPick={pickInto(setStart)}
           onClear={() => setStart(null)}
@@ -52,19 +55,17 @@ export function GraphView() {
         <MoviePicker
           label="End"
           movieId={end}
-          name={end ? data.movies[end]?.name : undefined}
+          name={end ? graph.movies[end]?.name : undefined}
           source={endSource}
           onPick={pickInto(setEnd)}
           onClear={() => setEnd(null)}
         />
       </div>
 
-      {start && end && (
-        <Result data={data} path={path} navigate={navigate} />
-      )}
+      {start && end && <Result graph={graph} path={path} navigate={navigate} />}
 
       <MovieGraph
-        data={data}
+        graph={graph}
         path={path}
         onSelectMovie={(id) => {
           if (!start) setStart(id);
@@ -75,44 +76,48 @@ export function GraphView() {
   );
 }
 
+interface MoviePickerProps {
+  label: string;
+  movieId: Id | null;
+  name: string | undefined;
+  source: SuggestionSource;
+  onPick: (s: Suggestion) => void;
+  onClear: () => void;
+}
+
 function MoviePicker({
   label,
   movieId,
   name,
   source,
   onPick,
-  onClear,
-}: {
-  label: string;
-  movieId: Id | null;
-  name: string | undefined;
-  source: ReturnType<typeof localSource>;
-  onPick: (s: Suggestion) => void;
-  onClear: () => void;
-}) {
+  onClear
+}: MoviePickerProps) {
   return (
     <div className="picker__field">
       <span className="picker__label">{label}</span>
       {movieId ? (
         <button type="button" className="chip chip--solid" onClick={onClear}>
-          {name ?? "?"} <span className="chip__remove">×</span>
+          {name ?? '?'} <span className="chip__remove">×</span>
         </button>
       ) : (
-        <Autocomplete source={source} onPick={onPick} placeholder="Pick a movie…" />
+        <Autocomplete
+          source={source}
+          onPick={onPick}
+          placeholder="Pick a movie…"
+        />
       )}
     </div>
   );
 }
 
-function Result({
-  data,
-  path,
-  navigate,
-}: {
-  data: ReturnType<typeof useGraph>;
-  path: ReturnType<typeof shortestPath>;
+interface ResultProps {
+  graph: Graph;
+  path: PathResult | null;
   navigate: (to: string) => void;
-}) {
+}
+
+function Result({ graph, path, navigate }: ResultProps) {
   if (!path) {
     return (
       <div className="result result--none">No connection found (yet).</div>
@@ -123,7 +128,7 @@ function Result({
   return (
     <div className="result">
       <div className="result__degrees">
-        {degrees} {degrees === 1 ? "degree" : "degrees"} of separation
+        {degrees} {degrees === 1 ? 'degree' : 'degrees'} of separation
       </div>
       <div className="chain">
         {path.movies.map((movieId, i) => (
@@ -133,7 +138,7 @@ function Result({
               className="chain__movie"
               onClick={() => navigate(`/movie/${movieId}`)}
             >
-              {data.movies[movieId]?.name}
+              {graph.movies[movieId]?.name}
             </button>
             {i < path.actors.length && (
               <button
@@ -141,7 +146,7 @@ function Result({
                 className="chain__actor"
                 onClick={() => navigate(`/actor/${path.actors[i]}`)}
               >
-                ↓ {data.actors[path.actors[i]!]?.name}
+                ↓ {graph.actors[path.actors[i]!]?.name}
               </button>
             )}
           </span>

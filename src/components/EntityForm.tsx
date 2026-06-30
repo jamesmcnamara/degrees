@@ -5,46 +5,45 @@
  * tapping one navigates to its form.
  */
 
-import { useMemo, useState } from "react";
-import { useLocation } from "wouter";
-import { Autocomplete } from "./Autocomplete";
-import type { EntityKind, Id } from "@/lib/types";
-import { otherKind } from "@/lib/types";
-import { ENTITY_CONFIG } from "@/lib/entityConfig";
-import { localSource, type Suggestion } from "@/lib/suggestions";
-import * as store from "@/lib/store";
-import { useGraph } from "@/lib/store";
-import { relatedIds } from "@/lib/graph";
+import { useMemo, useState } from 'react';
+import { useLocation } from 'wouter';
+import { Autocomplete } from './Autocomplete';
+import type { EntityKind, Id } from '@/lib/types';
+import { otherKind } from '@/lib/types';
+import { ENTITY_CONFIG } from '@/lib/entityConfig';
+import { localSource, type Suggestion } from '@/lib/suggestions';
+import * as store from '@/lib/store';
+import { useGraph } from '@/lib/store';
 
 interface EntityFormProps {
   kind: EntityKind;
   /** Existing entity id, or "new" to create one. */
-  id: Id | "new";
+  id: Id | 'new';
 }
 
 export function EntityForm({ kind, id }: EntityFormProps) {
-  const data = useGraph();
+  const graph = useGraph();
   const [, navigate] = useLocation();
   const config = ENTITY_CONFIG[kind];
   const related = otherKind(kind);
   const relatedConfig = ENTITY_CONFIG[related];
 
-  const collection = kind === "movie" ? data.movies : data.actors;
-  const entity = id === "new" ? undefined : collection[id];
+  const collection = kind === 'movie' ? graph.movies : graph.actors;
+  const entity = id === 'new' ? undefined : collection[id];
 
   // The subject is created lazily on first link / first save.
   const [subjectId, setSubjectId] = useState<Id | null>(
-    id === "new" ? null : id,
+    id === 'new' ? null : id
   );
-  const [name, setName] = useState(entity?.name ?? "");
+  const [name, setName] = useState(entity?.name ?? '');
 
   const effectiveId = subjectId;
-  const links = effectiveId ? relatedIds(data, kind, effectiveId) : [];
-  const linkedSet = useMemo(() => new Set(links), [links.join(",")]);
+  const links = effectiveId ? graph.relatedIds(kind, effectiveId) : [];
+  const linkedSet = useMemo(() => new Set(links), [links.join(',')]);
 
   const source = useMemo(
-    () => localSource(data, related, linkedSet),
-    [data, related, linkedSet],
+    () => localSource(graph, related, linkedSet),
+    [graph, related, linkedSet]
   );
 
   /** Ensure the subject node exists, returning its id. */
@@ -72,19 +71,19 @@ export function EntityForm({ kind, id }: EntityFormProps) {
     if (!owner) return;
     const relatedId =
       suggestion.id ?? store.upsertEntity(related, suggestion.label);
-    if (kind === "movie") store.linkAppearance(owner, relatedId);
+    if (kind === 'movie') store.linkAppearance(owner, relatedId);
     else store.linkAppearance(relatedId, owner);
   };
 
   const removeRelated = (relatedId: Id) => {
     if (!effectiveId) return;
-    if (kind === "movie") store.unlinkAppearance(effectiveId, relatedId);
+    if (kind === 'movie') store.unlinkAppearance(effectiveId, relatedId);
     else store.unlinkAppearance(relatedId, effectiveId);
   };
 
   const removeSubject = () => {
     if (effectiveId) store.deleteEntity(kind, effectiveId);
-    navigate("/");
+    navigate('/');
   };
 
   return (
@@ -98,7 +97,7 @@ export function EntityForm({ kind, id }: EntityFormProps) {
           onChange={(e) => setName(e.target.value)}
           onBlur={onNameBlur}
           autoCapitalize="words"
-          autoFocus={id === "new"}
+          autoFocus={id === 'new'}
         />
       </label>
 
@@ -109,9 +108,9 @@ export function EntityForm({ kind, id }: EntityFormProps) {
           <ul className="chips">
             {links.map((relatedId) => {
               const relatedEntity =
-                related === "movie"
-                  ? data.movies[relatedId]
-                  : data.actors[relatedId];
+                related === 'movie'
+                  ? graph.movies[relatedId]
+                  : graph.actors[relatedId];
               if (!relatedEntity) return null;
               return (
                 <li key={relatedId} className="chip">
@@ -146,7 +145,11 @@ export function EntityForm({ kind, id }: EntityFormProps) {
       </section>
 
       {effectiveId && (
-        <button type="button" className="btn btn--danger" onClick={removeSubject}>
+        <button
+          type="button"
+          className="btn btn--danger"
+          onClick={removeSubject}
+        >
           Delete {config.noun}
         </button>
       )}

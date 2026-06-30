@@ -4,18 +4,18 @@
  * localStorage on every change.
  */
 
-import { useSyncExternalStore } from "react";
-import type { EntityKind, GraphData, Id } from "./types";
-import { load, save } from "./storage";
-import * as G from "./graph";
+import { useSyncExternalStore } from 'react';
+import type { EntityKind, GraphData, Id } from './types';
+import { load, save } from './storage';
+import { Graph } from './graph';
 
-let state: GraphData = load();
+let state: Graph = load();
 const listeners = new Set<() => void>();
 
 const getState = () => state;
 
-const set = (next: GraphData) => {
-  state = next;
+const set = (next?: Graph) => {
+  if (next) state = next;
   save(state);
   listeners.forEach((l) => l());
 };
@@ -26,29 +26,33 @@ const subscribe = (listener: () => void) => {
 };
 
 /** Subscribe a component to the whole graph. */
-export const useGraph = (): GraphData =>
+export const useGraph = (): Graph =>
   useSyncExternalStore(subscribe, getState, getState);
 
 // --- actions ---------------------------------------------------------------
 
 /** Create (or find existing) entity by name; returns its id. */
 export const upsertEntity = (kind: EntityKind, name: string): Id => {
-  const [next, id] = G.upsertEntity(state, kind, name);
-  set(next);
+  const id = state.upsert(kind, name);
+  set(state);
   return id;
 };
 
-export const renameEntity = (kind: EntityKind, id: Id, name: string): void =>
-  set(G.renameEntity(state, kind, id, name));
+export const renameEntity = (kind: EntityKind, id: Id, name: string): void => {
+  state.rename(kind, id, name);
+  set(state);
+};
 
-export const deleteEntity = (kind: EntityKind, id: Id): void =>
-  set(G.deleteEntity(state, kind, id));
+export const deleteEntity = (kind: EntityKind, id: Id): void => {
+  state.delete(kind, id);
+  set(state);
+};
+export const linkAppearance = (movieId: Id, actorId: Id): void => {
+  state.link(movieId, actorId);
+  set(state);
+};
 
-export const linkAppearance = (movieId: Id, actorId: Id): void =>
-  set(G.linkAppearance(state, movieId, actorId));
-
-export const unlinkAppearance = (movieId: Id, actorId: Id): void =>
-  set(G.unlinkAppearance(state, movieId, actorId));
-
-/** Read the current snapshot outside React (rarely needed). */
-export const snapshot = getState;
+export const unlinkAppearance = (movieId: Id, actorId: Id): void => {
+  state.unlink(movieId, actorId);
+  set(state);
+};

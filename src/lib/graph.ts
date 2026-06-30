@@ -6,95 +6,180 @@
  * when they share an actor.
  */
 
-import type { Appearance, Entity, EntityKind, GraphData, Id } from './types';
+import { filter, map, not, some } from 'shades';
 import { newId } from './id';
-import {
-  concat,
-  cons,
-  filter,
-  findBy,
-  map,
-  mod,
-  not,
-  set,
-  some,
-  updateAll
-} from 'shades';
+import type { Entity, EntityKind, GraphData, Id } from './types';
 
-export const emptyGraph = (): GraphData => ({
-  movies: {},
-  actors: {},
-  appearances: []
-});
+export class Graph {
+  private data: GraphData = {
+    movies: {},
+    actors: {},
+    appearances: []
+  };
 
-const collection = (data: GraphData, kind: EntityKind) =>
-  kind === 'movie' ? data.movies : data.actors;
+  constructor(data?: GraphData) {
+    if (data) {
+      this.data = data;
+    }
+  }
 
-/** Look up an existing entity of `kind` by case-insensitive name. */
-export const findByName = (
-  data: GraphData,
-  kind: EntityKind,
-  name?: string
-): Id | undefined => {
-  if (!name) return undefined;
-  const target = name.trim().toLowerCase();
-  return Object.values(collection(data, kind)).find(
-    (e) => e.name.toLowerCase() === target
-  )?.id;
-};
+  get movies() {
+    return this.data.movies;
+  }
 
-/** Create the entity if it doesn't already exist; return [next, id]. */
-export const upsertEntity = (
-  data: GraphData,
-  kind: EntityKind,
-  rawName: string
-): [GraphData, Id] => {
-  const name = rawName.trim();
-  const existing = findByName(data, kind, name);
-  if (existing) return [data, existing];
+  get actors() {
+    return this.data.actors;
+  }
 
-  const id = newId();
-  const key = kind === 'movie' ? 'movies' : 'actors';
-  return [set(key, id)({ id, name })(data), id];
-};
+  get appearances() {
+    return this.data.appearances;
+  }
 
-/** Rename an existing entity. */
-export const renameEntity = (
-  data: GraphData,
-  kind: EntityKind,
-  id: Id,
-  name: string
-): GraphData => {
-  const key = kind === 'movie' ? 'movies' : 'actors';
-  const entity = data[key][id];
-  if (!entity) return data;
-  return set(key, id, 'name')(name.trim())(data);
-};
+  findByName(kind: EntityKind, name?: string): Id | undefined {
+    if (!name) return undefined;
+    const target = name.trim().toLowerCase();
+    return Object.values(
+      kind === 'movie' ? this.data.movies : this.data.actors
+    ).find((e) => e.name.toLowerCase() === target)?.id;
+  }
 
-/** Remove an entity and any appearances that reference it. */
-export const deleteEntity = (
-  data: GraphData,
-  kind: EntityKind,
-  id: Id
-): GraphData => {
-  const key = kind === 'movie' ? 'movies' : 'actors';
-  const { [id]: _removed, ...rest } = data[key];
-  const matcher = kind === 'movie' ? { movieId: id } : { actorId: id };
+  upsert(kind: EntityKind, rawName: string): Id {
+    const name = rawName.trim();
+    const existing = this.findByName(kind, name);
+    if (existing) return existing;
 
-  return updateAll<GraphData>(
-    set(key)(rest),
-    mod('appearances')(filter(not(matcher)))
-  )(data);
-};
+    const id = newId();
+    const key = kind === 'movie' ? 'movies' : 'actors';
+    this.data[key][id] = { id, name };
+    return id;
+  }
 
-export const mergeGraphs = (fst: GraphData, snd: GraphData): GraphData => {
-  let merged = {
+  rename(kind: EntityKind, id: Id, name: string) {
+    const entity = this.data[kind === 'movie' ? 'movies' : 'actors'][id];
+    if (entity) {
+      entity.name = name;
+    }
+  }
+
+  delete(kind: EntityKind, id: Id) {
+    const key = kind === 'movie' ? 'movies' : 'actors';
+    delete this.data[key][id];
+    const matcher = kind === 'movie' ? { movieId: id } : { actorId: id };
+    this.data.appearances = filter(not(matcher))(this.data.appearances);
+  }
+
+  merge(other: Graph) {
+    this.data = mergeGraphs(this.data, other.data);
+    this.mergeAppearances(other.data);
+  }
+
+  mergeAppearances = (toMerge: GraphData) => {
+    for (const appearance of toMerge.appearances) {
+      const movie = toMerge.movies[appearance.movieId]!.name;
+      const actor = toMerge.actors[appearance.actorId]!.name;
+      this.linkByName(movie, actor);
+    }
+  };
+
+  private hasAppearance = (movieId?: Id, actorId?: Id) =>
+    some({ movieId, actorId })(this.data.appearances);
+
+  hasAppearanceByName = (movie?: string, actor?: string) => {
+    return this.hasAppearance(
+      this.findByName('movie', movie),
+      this.findByName('actor', actor)
+    );
+  };
+
+  link(movieId: Id, actorId: Id) {
+    if (!this.hasAppearance(movieId, actorId)) {
+      this.data.appearances.push({ movieId, actorId });
+    }
+  }
+
+  private linkByName = (movie: string, actor: string) => {
+    const movieId = this.findByName('movie', movie);
+    const actorId = this.findByName('actor', actor);
+    if (movieId && actorId) this.link(movieId, actorId);
+  };
+
+  unlink(movieId: Id, actorId: Id) {
+    this.data.appearances = filter(not({ movieId, actorId }))(
+      this.data.appearances
+    );
+  }
+
+  /** Ids of entities linked to `id` (the opposite kind). */
+  relatedIds = (kind: EntityKind, id: Id): Id[] =>
+    kind === 'movie'
+      ? map('actorId')(filter({ movieId: id })(this.appearances))
+      : map('movieId')(filter({ actorId: id })(this.appearances));
+
+  /** Build movie-vs-movie edges (one per pair, listing every shared actor). */
+  movieProjection = (): ProjectionEdge[] => {
+    const { actorMovies } = this.buildAdjacency();
+    const edges = new Map<string, ProjectionEdge>();
+    for (const [actorId, movies] of actorMovies) {
+      for (let i = 0; i < movies.length; i++) {
+        for (let j = i + 1; j < movies.length; j++) {
+          const a = movies[i]!;
+          const b = movies[j]!;
+          const key = pairKey(a, b);
+          const edge = edges.get(key);
+          if (edge) edge.actorIds.push(actorId);
+          else edges.set(key, { source: a, target: b, actorIds: [actorId] });
+        }
+      }
+    }
+    return [...edges.values()];
+  };
+
+  private buildAdjacency = (): Adjacency => {
+    const movieActors = new Map<Id, Id[]>();
+    const actorMovies = new Map<Id, Id[]>();
+    for (const { movieId, actorId } of this.appearances) {
+      pushTo(movieActors, movieId, actorId);
+      pushTo(actorMovies, actorId, movieId);
+    }
+    return { movieActors, actorMovies };
+  };
+
+  shortestPath = (startMovie: Id, endMovie: Id): PathResult | null => {
+    if (startMovie === endMovie) return { movies: [startMovie], actors: [] };
+
+    const { movieActors, actorMovies } = this.buildAdjacency();
+    const prev = new Map<Id, { movie: Id; actor: Id }>();
+    const visited = new Set<Id>([startMovie]);
+    const queue: Id[] = [startMovie];
+
+    while (queue.length) {
+      const current = queue.shift()!;
+      for (const actorId of movieActors.get(current) ?? []) {
+        for (const next of actorMovies.get(actorId) ?? []) {
+          if (visited.has(next)) continue;
+          visited.add(next);
+          prev.set(next, { movie: current, actor: actorId });
+          if (next === endMovie) {
+            return reconstruct(prev, startMovie, endMovie);
+          }
+          queue.push(next);
+        }
+      }
+    }
+    return null;
+  };
+
+  stringify() {
+    return JSON.stringify(this.data);
+  }
+}
+
+const mergeGraphs = (fst: GraphData, snd: GraphData): GraphData => {
+  return {
     movies: mergeMaps(fst.movies, snd.movies),
     actors: mergeMaps(fst.actors, snd.actors),
     appearances: fst.appearances
   };
-  merged = mergeAppearances(merged, snd);
-  return merged;
 };
 
 const mergeMaps = (
@@ -103,7 +188,7 @@ const mergeMaps = (
 ): Record<string, Entity> => {
   const out = { ...fst };
   const flipped = Object.fromEntries(
-    Object.entries(fst).map(([id, entity]) => [normalize(entity.name), entity])
+    Object.entries(fst).map(([_, entity]) => [normalize(entity.name), entity])
   );
   for (const entity of Object.values(snd)) {
     const existing = flipped[normalize(entity.name)];
@@ -115,64 +200,6 @@ const mergeMaps = (
 };
 
 const normalize = (s: string): string => s.toLowerCase().trim();
-
-const mergeAppearances = (merged: GraphData, toMerge: GraphData) => {
-  for (const appearance of toMerge.appearances) {
-    const movie = toMerge.movies[appearance.movieId]!.name;
-    const actor = toMerge.actors[appearance.actorId]!.name;
-    merged = linkAppearanceByName(merged, movie, actor);
-  }
-  return merged;
-};
-
-const hasAppearance = (data: GraphData, movieId?: Id, actorId?: Id) =>
-  some({ movieId, actorId })(data.appearances);
-
-export const hasAppearanceByName = (
-  data: GraphData,
-  movie?: string,
-  actor?: string
-) => {
-  return hasAppearance(
-    data,
-    findByName(data, 'movie', movie),
-    findByName(data, 'actor', actor)
-  );
-};
-
-/** Connect a movie and an actor (no-op if already connected). */
-export const linkAppearance = (
-  data: GraphData,
-  movieId: Id,
-  actorId: Id
-): GraphData =>
-  hasAppearance(data, movieId, actorId)
-    ? data
-    : mod('appearances')(cons({ movieId, actorId }))(data);
-
-export const linkAppearanceByName = (
-  data: GraphData,
-  movie: string,
-  actor: string
-) => {
-  const movieId = findByName(data, 'movie', movie);
-  const actorId = findByName(data, 'actor', actor);
-  if (movieId && actorId) return linkAppearance(data, movieId, actorId);
-  return data;
-};
-
-/** Remove the edge between a movie and an actor. */
-export const unlinkAppearance = (
-  data: GraphData,
-  movieId: Id,
-  actorId: Id
-): GraphData => mod('appearances')(filter(not({ movieId, actorId })))(data);
-
-/** Ids of entities linked to `id` (the opposite kind). */
-export const relatedIds = (data: GraphData, kind: EntityKind, id: Id): Id[] =>
-  kind === 'movie'
-    ? map('actorId')(filter({ movieId: id })(data.appearances))
-    : map('movieId')(filter({ actorId: id })(data.appearances));
 
 // ---------------------------------------------------------------------------
 // Movie projection + pathfinding
@@ -189,16 +216,6 @@ interface Adjacency {
   actorMovies: Map<Id, Id[]>;
 }
 
-const buildAdjacency = (data: GraphData): Adjacency => {
-  const movieActors = new Map<Id, Id[]>();
-  const actorMovies = new Map<Id, Id[]>();
-  for (const { movieId, actorId } of data.appearances) {
-    pushTo(movieActors, movieId, actorId);
-    pushTo(actorMovies, actorId, movieId);
-  }
-  return { movieActors, actorMovies };
-};
-
 const pairKey = (a: Id, b: Id) => (a < b ? `${a}|${b}` : `${b}|${a}`);
 
 /** An edge in the movie-only projection, labelled by the shared actor(s). */
@@ -207,25 +224,6 @@ export interface ProjectionEdge {
   target: Id;
   actorIds: Id[];
 }
-
-/** Build movie-vs-movie edges (one per pair, listing every shared actor). */
-export const movieProjection = (data: GraphData): ProjectionEdge[] => {
-  const { actorMovies } = buildAdjacency(data);
-  const edges = new Map<string, ProjectionEdge>();
-  for (const [actorId, movies] of actorMovies) {
-    for (let i = 0; i < movies.length; i++) {
-      for (let j = i + 1; j < movies.length; j++) {
-        const a = movies[i]!;
-        const b = movies[j]!;
-        const key = pairKey(a, b);
-        const edge = edges.get(key);
-        if (edge) edge.actorIds.push(actorId);
-        else edges.set(key, { source: a, target: b, actorIds: [actorId] });
-      }
-    }
-  }
-  return [...edges.values()];
-};
 
 /** The shortest connection between two movies. */
 export interface PathResult {
@@ -239,37 +237,13 @@ export interface PathResult {
  * Breadth-first search over the movie projection. Returns the shortest path
  * (fewest hops / "degrees of separation") or null if unconnected.
  */
-export const shortestPath = (
-  data: GraphData,
-  startMovie: Id,
-  endMovie: Id
-): PathResult | null => {
-  if (startMovie === endMovie) return { movies: [startMovie], actors: [] };
-
-  const { movieActors, actorMovies } = buildAdjacency(data);
-  const prev = new Map<Id, { movie: Id; actor: Id }>();
-  const visited = new Set<Id>([startMovie]);
-  const queue: Id[] = [startMovie];
-
-  while (queue.length) {
-    const current = queue.shift()!;
-    for (const actorId of movieActors.get(current) ?? []) {
-      for (const next of actorMovies.get(actorId) ?? []) {
-        if (visited.has(next)) continue;
-        visited.add(next);
-        prev.set(next, { movie: current, actor: actorId });
-        if (next === endMovie) {
-          return reconstruct(prev, startMovie, endMovie);
-        }
-        queue.push(next);
-      }
-    }
-  }
-  return null;
-};
+interface MovieLink {
+  movie: Id;
+  actor: Id;
+}
 
 const reconstruct = (
-  prev: Map<Id, { movie: Id; actor: Id }>,
+  prev: Map<Id, MovieLink>,
   start: Id,
   end: Id
 ): PathResult => {
