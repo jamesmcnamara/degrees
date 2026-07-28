@@ -9,7 +9,13 @@
   --accent-2: #a3be8c;
   --danger: #bf616a;
   --radius: 12px;
-  font-family: Inter, system-ui, -apple-system, Avenir, Helvetica, Arial,
+  font-family:
+    Inter,
+    system-ui,
+    -apple-system,
+    Avenir,
+    Helvetica,
+    Arial,
     sans-serif;
   line-height: 1.45;
   color-scheme: dark;
@@ -149,6 +155,16 @@ button {
 .list__header h2 {
   margin: 0;
   font-size: 1.05rem;
+}
+
+.list__search {
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.65rem 0.75rem;
+  margin: 0.75rem 0;
+  outline: none;
 }
 
 .rows {

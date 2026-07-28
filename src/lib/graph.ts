@@ -73,7 +73,7 @@ export class Graph {
     this.mergeAppearances(other.data);
   }
 
-  mergeAppearances = (toMerge: GraphData) => {
+  private mergeAppearances = (toMerge: GraphData) => {
     for (const appearance of toMerge.appearances) {
       const movie = toMerge.movies[appearance.movieId]!.name;
       const actor = toMerge.actors[appearance.actorId]!.name;

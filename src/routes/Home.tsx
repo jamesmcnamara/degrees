@@ -1,10 +1,11 @@
 /** Landing screen: jump into the game or manage movies and actors. */
 
-import { Link, useLocation } from 'wouter';
-import type { EntityKind } from '@/lib/types';
 import { ENTITY_CONFIG } from '@/lib/entityConfig';
 import * as store from '@/lib/store';
 import { useGraph } from '@/lib/store';
+import type { EntityKind } from '@/lib/types';
+import { useState } from 'react';
+import { Link, useLocation } from 'wouter';
 
 export function Home() {
   const data = useGraph();
@@ -34,7 +35,12 @@ interface EntityListProps {
 
 function EntityList({ kind, entities }: EntityListProps) {
   const [, navigate] = useLocation();
+  const [search, setSearch] = useState<string | undefined>(undefined);
   const config = ENTITY_CONFIG[kind];
+
+  const filtered = search
+    ? entities.filter((e) => normalize(e.name).includes(normalize(search)))
+    : entities;
 
   return (
     <section className="list">
@@ -46,11 +52,19 @@ function EntityList({ kind, entities }: EntityListProps) {
           + Add
         </Link>
       </header>
+      <input
+        type="text"
+        name={`${kind}-search`}
+        className="list__search"
+        placeholder={`Search ${config.noun.toLowerCase()}s…`}
+        value={search ?? ''}
+        onChange={(e) => setSearch(e.target.value)}
+      />
       {entities.length === 0 ? (
         <p className="muted">No {config.noun.toLowerCase()}s yet.</p>
       ) : (
         <ul className="rows">
-          {entities.map((e) => (
+          {filtered.map((e) => (
             <li key={e.id} className="row">
               <button
                 type="button"
