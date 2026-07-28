@@ -1,9 +1,9 @@
 # Six Degrees
 
 A mobile-first, offline-capable app for playing "six degrees of separation" with
-movies. Add movies (with their cast) and actors (with their filmography), then
-open the graph view to find the shortest chain of shared actors connecting any
-two films.
+movies. Add movies (with their cast and viewing diary) and actors (with their
+filmography), then open the graph view to find the shortest chain of shared
+actors connecting any two films.
 
 Built with Bun + React 19. All data lives in `localStorage` (a single JSON
 blob), and a service worker caches the app shell so it works fully offline as an
@@ -45,4 +45,5 @@ bun test     # unit tests for the graph logic
 - `/` — home: movie & actor lists, add buttons
 - `/movie/:id`, `/movie/new` — movie form
 - `/actor/:id`, `/actor/new` — actor form
+- `/diary` — all movie diary entries, newest first
 - `/graph` — the connection game

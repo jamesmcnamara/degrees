@@ -34,7 +34,8 @@ body {
 }
 
 button,
-input {
+input,
+textarea {
   font: inherit;
   color: inherit;
 }
@@ -90,6 +91,11 @@ button {
   color: var(--accent);
   text-decoration: none;
   font-weight: 600;
+}
+
+.appbar__actions {
+  display: flex;
+  gap: 1rem;
 }
 
 .content {
@@ -235,6 +241,19 @@ button {
 .field__input:focus,
 .autocomplete__input:focus {
   border-color: var(--accent);
+}
+
+.field__input:disabled {
+  opacity: 0.6;
+}
+
+.diary-editor {
+  margin-top: 1.5rem;
+}
+
+.diary-editor__input {
+  min-height: 14rem;
+  resize: vertical;
 }
 
 .related__heading {
@@ -394,6 +413,43 @@ button {
   color: var(--accent-2);
   font-size: 0.9rem;
   text-align: left;
+}
+
+/* --- diary ------------------------------------------------------------- */
+
+.diary {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.diary-entry {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+}
+
+.diary-entry__header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.diary-entry__movie {
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.diary-entry__date {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.diary-entry__text {
+  margin: 0.75rem 0 0;
+  white-space: pre-wrap;
 }
 
 @media (prefers-reduced-motion) {

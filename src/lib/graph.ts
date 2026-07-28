@@ -8,7 +8,14 @@
 
 import { filter, map, not, some } from 'shades';
 import { newId } from './id';
-import type { Entity, EntityKind, GraphData, Id } from './types';
+import type {
+  DiaryEntry,
+  Entity,
+  EntityKind,
+  GraphData,
+  Id,
+  Movie
+} from './types';
 
 export class Graph {
   private data: GraphData = {
@@ -49,8 +56,11 @@ export class Graph {
     if (existing) return existing;
 
     const id = newId();
-    const key = kind === 'movie' ? 'movies' : 'actors';
-    this.data[key][id] = { id, name };
+    if (kind === 'movie') {
+      this.data.movies[id] = { id, name, diary: [] };
+    } else {
+      this.data.actors[id] = { id, name };
+    }
     return id;
   }
 
@@ -107,6 +117,20 @@ export class Graph {
     this.data.appearances = filter(not({ movieId, actorId }))(
       this.data.appearances
     );
+  }
+
+  setDiaryEntry(movieId: Id, date: string, text: string) {
+    const movie = this.data.movies[movieId];
+    if (!movie) {
+      return;
+    }
+    const existing = movie.diary?.find((entry) => entry.date === date);
+    if (existing) {
+      existing.text = text;
+    } else {
+      movie.diary = movie.diary ?? [];
+      movie.diary.push({ date, text });
+    }
   }
 
   /** Ids of entities linked to `id` (the opposite kind). */
@@ -169,6 +193,14 @@ export class Graph {
     return null;
   };
 
+  clone(): Graph {
+    return new Graph({
+      movies: this.data.movies,
+      actors: this.data.actors,
+      appearances: this.data.appearances
+    });
+  }
+
   stringify() {
     return JSON.stringify(this.data);
   }
@@ -176,16 +208,16 @@ export class Graph {
 
 const mergeGraphs = (fst: GraphData, snd: GraphData): GraphData => {
   return {
-    movies: mergeMaps(fst.movies, snd.movies),
+    movies: mergeMovieMaps(fst.movies, snd.movies),
     actors: mergeMaps(fst.actors, snd.actors),
     appearances: fst.appearances
   };
 };
 
-const mergeMaps = (
-  fst: Record<string, Entity>,
-  snd: Record<string, Entity>
-): Record<string, Entity> => {
+const mergeMaps = <T extends Entity>(
+  fst: Record<string, T>,
+  snd: Record<string, T>
+): Record<string, T> => {
   const out = { ...fst };
   const flipped = Object.fromEntries(
     Object.entries(fst).map(([_, entity]) => [normalize(entity.name), entity])
@@ -198,6 +230,33 @@ const mergeMaps = (
   }
   return out;
 };
+
+const mergeMovieMaps = (
+  fst: Record<string, Movie>,
+  snd: Record<string, Movie>
+): Record<string, Movie> => {
+  const out = mergeMaps(fst, snd);
+  const byName = Object.fromEntries(
+    Object.values(out).map((movie) => [normalize(movie.name), movie])
+  );
+  for (const movie of Object.values(snd)) {
+    const target = byName[normalize(movie.name)];
+    if (!target) continue;
+    const dates = new Set(target.diary?.map((entry) => entry.date));
+    target.diary?.push(
+      ...(movie.diary?.filter((entry) => !dates.has(entry.date)) ?? [])
+    );
+  }
+  return out;
+};
+
+const normalizeDiary = (diary: DiaryEntry[] | undefined): DiaryEntry[] =>
+  Array.isArray(diary)
+    ? diary.filter(
+        (entry) =>
+          typeof entry?.date === 'string' && typeof entry.text === 'string'
+      )
+    : [];
 
 const normalize = (s: string): string => s.toLowerCase().trim();
 

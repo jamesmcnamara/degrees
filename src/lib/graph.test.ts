@@ -40,6 +40,43 @@ test('upsertEntity de-duplicates by case-insensitive name', () => {
   const id2 = graph.upsert('movie', '  heat ');
   expect(id1).toBe(id2);
   expect(Object.keys(graph.movies)).toHaveLength(1);
+  expect(graph.movies[id1]?.diary).toEqual([]);
+});
+
+test('setDiaryEntry creates and updates one entry per movie and date', () => {
+  const graph = new Graph();
+  const movieId = graph.upsert('movie', 'Heat');
+
+  graph.setDiaryEntry(movieId, '2026-07-28', 'Great');
+  graph.setDiaryEntry(movieId, '2026-07-28', 'Still great');
+
+  expect(graph.movies[movieId]?.diary).toEqual([
+    { date: '2026-07-28', text: 'Still great' }
+  ]);
+});
+
+test('clone returns an independent graph snapshot', () => {
+  const graph = new Graph();
+  const movieId = graph.upsert('movie', 'Heat');
+  graph.setDiaryEntry(movieId, '2026-07-28', 'Original');
+  const clone = graph.clone();
+
+  graph.setDiaryEntry(movieId, '2026-07-28', 'Changed');
+
+  expect(clone).not.toBe(graph);
+  expect(clone.movies[movieId]?.diary[0]?.text).toBe('Original');
+});
+
+test('constructor gives legacy movies an empty diary', () => {
+  const graph = new Graph({
+    movies: {
+      heat: { id: 'heat', name: 'Heat' }
+    },
+    actors: {},
+    appearances: []
+  });
+
+  expect(graph.movies.heat?.diary).toEqual([]);
 });
 
 test('relatedIds returns the opposite-kind neighbours', () => {
@@ -115,4 +152,20 @@ test('mergeGraphs left merges graphs and updates UUIDs', () => {
   expect(Object.entries(merged.appearances)).toHaveLength(6);
   expect(merged.hasAppearanceByName('E', 'Carol')).toBeTrue();
   expect(merged.hasAppearanceByName('E', 'Derrick')).toBeTrue();
+});
+
+test('mergeGraphs keeps diary entries from duplicate movies', () => {
+  const fst = new Graph();
+  const snd = new Graph();
+  const fstMovie = fst.upsert('movie', 'Heat');
+  const sndMovie = snd.upsert('movie', 'heat');
+  fst.setDiaryEntry(fstMovie, '2026-07-27', 'First viewing');
+  snd.setDiaryEntry(sndMovie, '2026-07-28', 'Second viewing');
+
+  fst.merge(snd);
+
+  expect(fst.movies[fstMovie]?.diary).toEqual([
+    { date: '2026-07-27', text: 'First viewing' },
+    { date: '2026-07-28', text: 'Second viewing' }
+  ]);
 });

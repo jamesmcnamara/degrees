@@ -1,11 +1,10 @@
 /**
  * A tiny external store bound to React via `useSyncExternalStore`.
- * All mutations go through the pure ops in `graph.ts` and persist to
- * localStorage on every change.
+ * All mutations persist to localStorage and publish a fresh Graph snapshot.
  */
 
 import { useSyncExternalStore } from 'react';
-import type { EntityKind, GraphData, Id } from './types';
+import type { EntityKind, Id } from './types';
 import { load, save } from './storage';
 import { Graph } from './graph';
 
@@ -15,7 +14,9 @@ const listeners = new Set<() => void>();
 const getState = () => state;
 
 const set = (next?: Graph) => {
-  if (next) state = next;
+  // useSyncExternalStore compares snapshots by identity. Clone after each
+  // mutation so React subscribers rerender and memoized graph values refresh.
+  state = (next ?? state).clone();
   save(state);
   listeners.forEach((l) => l());
 };
@@ -54,5 +55,14 @@ export const linkAppearance = (movieId: Id, actorId: Id): void => {
 
 export const unlinkAppearance = (movieId: Id, actorId: Id): void => {
   state.unlink(movieId, actorId);
+  set(state);
+};
+
+export const setDiaryEntry = (
+  movieId: Id,
+  date: string,
+  text: string
+): void => {
+  state.setDiaryEntry(movieId, date, text);
   set(state);
 };

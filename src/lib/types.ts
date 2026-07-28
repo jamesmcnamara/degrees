@@ -11,6 +11,16 @@ export interface Entity {
   name: string;
 }
 
+export interface DiaryEntry {
+  /** Local calendar date for the viewing day, formatted as YYYY-MM-DD. */
+  date: string;
+  text: string;
+}
+
+export interface Movie extends Entity {
+  diary?: DiaryEntry[];
+}
+
 /** A bipartite edge: an actor appears in a movie. */
 export interface Appearance {
   movieId: Id;
@@ -19,7 +29,7 @@ export interface Appearance {
 
 /** The entire app state, serialised as JSON into localStorage. */
 export interface GraphData {
-  movies: Record<Id, Entity>;
+  movies: Record<Id, Movie>;
   actors: Record<Id, Entity>;
   appearances: Appearance[];
 }

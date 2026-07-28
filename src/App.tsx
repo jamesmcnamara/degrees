@@ -1,6 +1,7 @@
 import { Link, Route, Switch, useLocation } from "wouter";
 import { Home } from "./routes/Home";
 import { GraphView } from "./routes/GraphView";
+import { Diary } from "./routes/Diary";
 import { EntityForm } from "./components/EntityForm";
 import { ENTITY_CONFIG } from "./lib/entityConfig";
 import type { EntityKind } from "./lib/types";
@@ -13,6 +14,7 @@ export function App() {
       <main className="content">
         <Switch>
           <Route path="/" component={Home} />
+          <Route path="/diary" component={Diary} />
           <Route path="/graph" component={GraphView} />
           <Route path="/movie/:id">
             {(p) => <EntityForm key={`movie:${p.id}`} kind="movie" id={p.id!} />}
@@ -49,9 +51,14 @@ function Header() {
         </button>
       )}
       {atRoot && (
-        <Link href="/graph" className="appbar__action">
-          Play
-        </Link>
+        <nav className="appbar__actions">
+          <Link href="/diary" className="appbar__action">
+            Diary
+          </Link>
+          <Link href="/graph" className="appbar__action">
+            Play
+          </Link>
+        </nav>
       )}
     </header>
   );
@@ -59,6 +66,7 @@ function Header() {
 
 const titleFor = (location: string): string => {
   if (location === "/graph") return "Connection";
+  if (location === "/diary") return "Diary";
   for (const kind of ["movie", "actor"] as EntityKind[]) {
     if (location.startsWith(`/${kind}/`)) {
       const id = location.split("/")[2];

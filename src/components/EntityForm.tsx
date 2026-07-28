@@ -11,6 +11,7 @@ import { Autocomplete } from './Autocomplete';
 import type { EntityKind, Id } from '@/lib/types';
 import { otherKind } from '@/lib/types';
 import { ENTITY_CONFIG } from '@/lib/entityConfig';
+import { diaryDateFor, formatDiaryDate } from '@/lib/diary';
 import { localSource, type Suggestion } from '@/lib/suggestions';
 import * as store from '@/lib/store';
 import { useGraph } from '@/lib/store';
@@ -86,6 +87,19 @@ export function EntityForm({ kind, id }: EntityFormProps) {
     navigate('/');
   };
 
+  const diaryDate = diaryDateFor();
+  const diaryText =
+    kind === 'movie' && effectiveId
+      ? (graph.movies[effectiveId]?.diary?.find(
+          (entry) => entry.date === diaryDate
+        )?.text ?? '')
+      : '';
+
+  const updateDiary = (text: string) => {
+    const movieId = ensureSubject();
+    if (movieId) store.setDiaryEntry(movieId, diaryDate, text);
+  };
+
   return (
     <div className="form">
       <label className="field">
@@ -143,6 +157,25 @@ export function EntityForm({ kind, id }: EntityFormProps) {
           placeholder={config.addRelatedPlaceholder}
         />
       </section>
+
+      {kind === 'movie' && (
+        <label className="field diary-editor">
+          <span className="field__label">
+            Diary · {formatDiaryDate(diaryDate)}
+          </span>
+          <textarea
+            className="field__input diary-editor__input"
+            value={diaryText}
+            placeholder={
+              name.trim()
+                ? 'Write about this viewing…'
+                : 'Add a title before writing…'
+            }
+            onChange={(event) => updateDiary(event.target.value)}
+            disabled={!name.trim()}
+          />
+        </label>
+      )}
 
       {effectiveId && (
         <button
