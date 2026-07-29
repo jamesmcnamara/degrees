@@ -21,6 +21,9 @@ export function MovieDiaryEditor({
   const [isEditingDiaryDate, setIsEditingDiaryDate] = useState(false);
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
 
+  const [isMusing, setIsMusing] = useState(false);
+  const [musing, setMusing] = useState('');
+
   const movie = movieId ? graph.movies[movieId] : undefined;
   const diaryText = movie
     ? (movie.diary?.find((entry) => entry.date === diaryDate)?.text ?? '')
@@ -38,6 +41,17 @@ export function MovieDiaryEditor({
   function setDate(date: string) {
     setDiaryDate(date);
     setIsEditingDiaryDate(false);
+  }
+
+  function muse() {
+    if (isMusing) {
+      updateDiary(`${diaryText.trim()}${diaryText ? '\n\n' : ''}${musing}`);
+      setMusing('');
+      setIsMusing(false);
+    } else {
+      setIsMusing(true);
+      setMusing('');
+    }
   }
 
   return (
@@ -65,6 +79,18 @@ export function MovieDiaryEditor({
         onChange={(event) => updateDiary(event.target.value)}
         disabled={!movieName.trim()}
       />
+      {isMusing && (
+        <textarea
+          className="field__input diary-editor__input--musing"
+          value={musing}
+          onChange={(event) => setMusing(event.target.value)}
+          placeholder="Share your musing…"
+          autoFocus
+        />
+      )}
+      <button type="button" className="btn btn--action" onClick={muse}>
+        {isMusing ? 'Mischief Managed' : 'Add Musing'}
+      </button>
 
       {historicalEntries.length > 0 && (
         <div className="diary-history">

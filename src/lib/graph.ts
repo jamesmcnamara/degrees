@@ -9,6 +9,7 @@
 import { filter, map, not, some } from 'shades';
 import { newId } from './id';
 import type {
+  Appearance,
   DiaryEntry,
   Entity,
   EntityKind,
@@ -18,7 +19,7 @@ import type {
 } from './types';
 
 export class Graph {
-  private data: GraphData = {
+  private _data: GraphData = {
     movies: {},
     actors: {},
     appearances: []
@@ -26,27 +27,27 @@ export class Graph {
 
   constructor(data?: GraphData) {
     if (data) {
-      this.data = data;
+      this._data = data;
     }
   }
 
-  get movies() {
-    return this.data.movies;
+  get movies(): Readonly<Record<Id, Movie>> {
+    return this._data.movies;
   }
 
-  get actors() {
-    return this.data.actors;
+  get actors(): Readonly<Record<Id, Entity>> {
+    return this._data.actors;
   }
 
-  get appearances() {
-    return this.data.appearances;
+  get appearances(): ReadonlyArray<Appearance> {
+    return this._data.appearances;
   }
 
   findByName(kind: EntityKind, name?: string): Id | undefined {
     if (!name) return undefined;
     const target = name.trim().toLowerCase();
     return Object.values(
-      kind === 'movie' ? this.data.movies : this.data.actors
+      kind === 'movie' ? this._data.movies : this._data.actors
     ).find((e) => e.name.toLowerCase() === target)?.id;
   }
 
@@ -57,15 +58,15 @@ export class Graph {
 
     const id = newId();
     if (kind === 'movie') {
-      this.data.movies[id] = { id, name, diary: [] };
+      this._data.movies[id] = { id, name, diary: [] };
     } else {
-      this.data.actors[id] = { id, name };
+      this._data.actors[id] = { id, name };
     }
     return id;
   }
 
   rename(kind: EntityKind, id: Id, name: string) {
-    const entity = this.data[kind === 'movie' ? 'movies' : 'actors'][id];
+    const entity = this._data[kind === 'movie' ? 'movies' : 'actors'][id];
     if (entity) {
       entity.name = name;
     }
@@ -73,13 +74,13 @@ export class Graph {
 
   delete(kind: EntityKind, id: Id) {
     const key = kind === 'movie' ? 'movies' : 'actors';
-    delete this.data[key][id];
+    delete this._data[key][id];
     const matcher = kind === 'movie' ? { movieId: id } : { actorId: id };
-    this.data.appearances = filter(not(matcher))(this.data.appearances);
+    this._data.appearances = filter(not(matcher))(this._data.appearances);
   }
 
   private hasAppearance = (movieId?: Id, actorId?: Id) =>
-    some({ movieId, actorId })(this.data.appearances);
+    some({ movieId, actorId })(this._data.appearances);
 
   hasAppearanceByName = (movie?: string, actor?: string) => {
     return this.hasAppearance(
@@ -90,7 +91,7 @@ export class Graph {
 
   link(movieId: Id, actorId: Id) {
     if (!this.hasAppearance(movieId, actorId)) {
-      this.data.appearances.push({ movieId, actorId });
+      this._data.appearances.push({ movieId, actorId });
     }
   }
 
@@ -101,13 +102,13 @@ export class Graph {
   };
 
   unlink(movieId: Id, actorId: Id) {
-    this.data.appearances = filter(not({ movieId, actorId }))(
-      this.data.appearances
+    this._data.appearances = filter(not({ movieId, actorId }))(
+      this._data.appearances
     );
   }
 
   setDiaryEntry(movieId: Id, date: string, text: string) {
-    const movie = this.data.movies[movieId];
+    const movie = this._data.movies[movieId];
     if (!movie) {
       return;
     }
@@ -123,8 +124,8 @@ export class Graph {
   /** Ids of entities linked to `id` (the opposite kind). */
   relatedIds = (kind: EntityKind, id: Id): Id[] =>
     kind === 'movie'
-      ? map('actorId')(filter({ movieId: id })(this.appearances))
-      : map('movieId')(filter({ actorId: id })(this.appearances));
+      ? map('actorId')(filter({ movieId: id })(this._data.appearances))
+      : map('movieId')(filter({ actorId: id })(this._data.appearances));
 
   /** Build movie-vs-movie edges (one per pair, listing every shared actor). */
   movieProjection = (): ProjectionEdge[] => {
@@ -180,16 +181,13 @@ export class Graph {
     return null;
   };
 
+  // Shallow clone because we only need the top-level object identity to change to trigger reactivity.
   clone(): Graph {
-    return new Graph({
-      movies: this.data.movies,
-      actors: this.data.actors,
-      appearances: this.data.appearances
-    });
+    return new Graph(this._data);
   }
 
   stringify() {
-    return JSON.stringify(this.data);
+    return JSON.stringify(this._data);
   }
 }
 

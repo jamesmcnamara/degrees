@@ -43,7 +43,10 @@ export const chronologicalDiary = (
 ): MovieDiaryEntry[] =>
   Object.values(movies)
     .flatMap(
-      (movie) => movie.diary?.map((entry) => ({ ...entry, movie })) ?? []
+      (movie) =>
+        movie.diary?.flatMap((entry) =>
+          entry.text ? [{ ...entry, movie }] : []
+        ) ?? []
     )
     .sort(
       (a, b) =>

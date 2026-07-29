@@ -8,6 +8,7 @@
   --accent: #88c0d0;
   --accent-2: #a3be8c;
   --danger: #bf616a;
+  --action: #88c0d0;
   --radius: 12px;
   font-family:
     Inter,
@@ -74,6 +75,8 @@ button {
 .appbar__brand {
   font-weight: 700;
   font-size: 1.15rem;
+  text-decoration: none;
+  color: var(--text);
 }
 
 .appbar__back {
@@ -96,6 +99,63 @@ button {
 .appbar__actions {
   display: flex;
   gap: 1rem;
+}
+
+.appbar__menu {
+  position: relative;
+}
+
+.appbar__menu-toggle {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border-radius: 999px;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  list-style: none;
+}
+
+.appbar__menu-toggle::-webkit-details-marker {
+  display: none;
+}
+
+.appbar__menu-toggle:hover,
+.appbar__menu-toggle:focus-visible {
+  background: var(--surface-2);
+  outline: none;
+}
+
+.appbar__menu-panel {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  min-width: 10rem;
+  padding: 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: 0 0.75rem 2rem rgb(0 0 0 / 35%);
+}
+
+.appbar__menu-action {
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  text-align: left;
+}
+
+.appbar__menu-action:hover,
+.appbar__menu-action:focus-visible {
+  background: var(--surface-2);
+  outline: none;
+}
+
+.appbar__menu-action--danger {
+  color: var(--danger);
 }
 
 .content {
@@ -124,9 +184,9 @@ button {
   font-size: 0.9rem;
 }
 
-.btn--danger {
-  border-color: var(--danger);
-  color: var(--danger);
+.btn--action {
+  border-color: var(--action);
+  color: var(--action);
   background: transparent;
   width: 100%;
   margin-top: 1.5rem;

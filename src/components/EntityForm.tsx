@@ -81,11 +81,6 @@ export function EntityForm({ kind, id }: EntityFormProps) {
     else store.unlinkAppearance(relatedId, subjectId);
   };
 
-  const removeSubject = () => {
-    if (subjectId) store.deleteEntity(kind, subjectId);
-    navigate('/');
-  };
-
   return (
     <div className="form">
       <label className="field">
@@ -150,16 +145,6 @@ export function EntityForm({ kind, id }: EntityFormProps) {
           movieName={name}
           ensureMovie={ensureSubject}
         />
-      )}
-
-      {subjectId && (
-        <button
-          type="button"
-          className="btn btn--danger"
-          onClick={removeSubject}
-        >
-          Delete {config.noun}
-        </button>
       )}
     </div>
   );
