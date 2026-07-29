@@ -138,34 +138,3 @@ test('unlinkAppearance removes a single edge', () => {
   graph.unlink(ids.B!, ids.Bob!);
   expect(graph.relatedIds('movie', ids.B!)).toEqual([ids.Alice!]);
 });
-
-test('mergeGraphs left merges graphs and updates UUIDs', () => {
-  const fst = buildFixture();
-  const snd = buildFixture();
-
-  fst.link('E', 'Carol');
-  snd.link('E', 'Derrick');
-  const merged = fst.get();
-  merged.merge(snd.get());
-  expect(Object.entries(merged.actors)).toHaveLength(4);
-  expect(Object.entries(merged.movies)).toHaveLength(5);
-  expect(Object.entries(merged.appearances)).toHaveLength(6);
-  expect(merged.hasAppearanceByName('E', 'Carol')).toBeTrue();
-  expect(merged.hasAppearanceByName('E', 'Derrick')).toBeTrue();
-});
-
-test('mergeGraphs keeps diary entries from duplicate movies', () => {
-  const fst = new Graph();
-  const snd = new Graph();
-  const fstMovie = fst.upsert('movie', 'Heat');
-  const sndMovie = snd.upsert('movie', 'heat');
-  fst.setDiaryEntry(fstMovie, '2026-07-27', 'First viewing');
-  snd.setDiaryEntry(sndMovie, '2026-07-28', 'Second viewing');
-
-  fst.merge(snd);
-
-  expect(fst.movies[fstMovie]?.diary).toEqual([
-    { date: '2026-07-27', text: 'First viewing' },
-    { date: '2026-07-28', text: 'Second viewing' }
-  ]);
-});

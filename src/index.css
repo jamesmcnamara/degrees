@@ -254,6 +254,7 @@ button {
 .diary-editor__label {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.3rem;
 }
 
@@ -281,7 +282,8 @@ button {
 
 .field__error {
   display: block;
-  margin: -0.15rem 0 0.4rem;
+  text-transform: none;
+  margin: 0.15rem 0 0.4rem;
   color: var(--danger);
   font-size: 0.8rem;
 }
@@ -328,7 +330,7 @@ button {
 }
 
 .diary-history__input {
-  min-height: 8rem;
+  min-height: 20rem;
   border: 0;
   border-top: 1px solid var(--border);
   border-radius: 0;

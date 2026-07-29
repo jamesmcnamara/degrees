@@ -3,6 +3,7 @@ import * as store from '@/lib/store';
 import { useGraph } from '@/lib/store';
 import type { Id } from '@/lib/types';
 import { useState } from 'react';
+import { DateEntry } from './DateEntry';
 
 interface MovieDiaryEditorProps {
   movieId: Id | null;
@@ -17,9 +18,7 @@ export function MovieDiaryEditor({
 }: MovieDiaryEditorProps) {
   const graph = useGraph();
   const [diaryDate, setDiaryDate] = useState(diaryDateFor);
-  const [diaryDateDraft, setDiaryDateDraft] = useState(diaryDate);
-  const [editingDiaryDate, setEditingDiaryDate] = useState(false);
-  const [diaryDateError, setDiaryDateError] = useState<string | null>(null);
+  const [isEditingDiaryDate, setIsEditingDiaryDate] = useState(false);
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
 
   const movie = movieId ? graph.movies[movieId] : undefined;
@@ -36,82 +35,33 @@ export function MovieDiaryEditor({
     if (id) store.setDiaryEntry(id, diaryDate, text);
   };
 
-  const editDiaryDate = () => {
-    setDiaryDateDraft(diaryDate);
-    setDiaryDateError(null);
-    setEditingDiaryDate(true);
-  };
-
-  const commitDiaryDate = () => {
-    const nextDate = diaryDateDraft.trim();
-    if (!isDiaryDate(nextDate)) {
-      setDiaryDateError('Enter a valid date as YYYY-MM-DD.');
-      return;
-    }
-    setDiaryDate(nextDate);
-    setDiaryDateDraft(nextDate);
-    setDiaryDateError(null);
-    setEditingDiaryDate(false);
-    setExpandedDate(null);
-  };
-
-  const cancelDiaryDateEdit = () => {
-    setDiaryDateDraft(diaryDate);
-    setDiaryDateError(null);
-    setEditingDiaryDate(false);
-  };
+  function setDate(date: string) {
+    setDiaryDate(date);
+    setIsEditingDiaryDate(false);
+  }
 
   return (
     <section className="field diary-editor">
       <div className="field__label diary-editor__label">
         <label htmlFor="diary-text">Diary ·</label>
-        {editingDiaryDate ? (
-          <input
-            className="diary-editor__date-input"
-            type="text"
-            value={diaryDateDraft}
-            onChange={(event) => {
-              setDiaryDateDraft(event.target.value);
-              setDiaryDateError(null);
-            }}
-            onBlur={commitDiaryDate}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') {
-                event.preventDefault();
-                commitDiaryDate();
-              } else if (event.key === 'Escape') {
-                cancelDiaryDateEdit();
-              }
-            }}
-            inputMode="numeric"
-            placeholder="YYYY-MM-DD"
-            aria-label="Diary date"
-            aria-invalid={diaryDateError ? true : undefined}
-            autoFocus
-          />
+        {isEditingDiaryDate ? (
+          <DateEntry date={diaryDate} setDate={setDate} />
         ) : (
           <button
             type="button"
             className="diary-editor__date"
-            onClick={editDiaryDate}
+            onClick={() => setIsEditingDiaryDate(true)}
             aria-label="Change diary date"
           >
             {formatDiaryDate(diaryDate)}
           </button>
         )}
       </div>
-      {diaryDateError && (
-        <span className="field__error">{diaryDateError}</span>
-      )}
       <textarea
         id="diary-text"
         className="field__input diary-editor__input"
         value={diaryText}
-        placeholder={
-          movieName.trim()
-            ? 'Write about this viewing…'
-            : 'Add a title before writing…'
-        }
+        placeholder="Tell me your highdeas…"
         onChange={(event) => updateDiary(event.target.value)}
         disabled={!movieName.trim()}
       />

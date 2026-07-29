@@ -78,19 +78,6 @@ export class Graph {
     this.data.appearances = filter(not(matcher))(this.data.appearances);
   }
 
-  merge(other: Graph) {
-    this.data = mergeGraphs(this.data, other.data);
-    this.mergeAppearances(other.data);
-  }
-
-  private mergeAppearances = (toMerge: GraphData) => {
-    for (const appearance of toMerge.appearances) {
-      const movie = toMerge.movies[appearance.movieId]!.name;
-      const actor = toMerge.actors[appearance.actorId]!.name;
-      this.linkByName(movie, actor);
-    }
-  };
-
   private hasAppearance = (movieId?: Id, actorId?: Id) =>
     some({ movieId, actorId })(this.data.appearances);
 
@@ -205,50 +192,6 @@ export class Graph {
     return JSON.stringify(this.data);
   }
 }
-
-const mergeGraphs = (fst: GraphData, snd: GraphData): GraphData => {
-  return {
-    movies: mergeMovieMaps(fst.movies, snd.movies),
-    actors: mergeMaps(fst.actors, snd.actors),
-    appearances: fst.appearances
-  };
-};
-
-const mergeMaps = <T extends Entity>(
-  fst: Record<string, T>,
-  snd: Record<string, T>
-): Record<string, T> => {
-  const out = { ...fst };
-  const flipped = Object.fromEntries(
-    Object.entries(fst).map(([_, entity]) => [normalize(entity.name), entity])
-  );
-  for (const entity of Object.values(snd)) {
-    const existing = flipped[normalize(entity.name)];
-    if (!existing) {
-      out[entity.id] = entity;
-    }
-  }
-  return out;
-};
-
-const mergeMovieMaps = (
-  fst: Record<string, Movie>,
-  snd: Record<string, Movie>
-): Record<string, Movie> => {
-  const out = mergeMaps(fst, snd);
-  const byName = Object.fromEntries(
-    Object.values(out).map((movie) => [normalize(movie.name), movie])
-  );
-  for (const movie of Object.values(snd)) {
-    const target = byName[normalize(movie.name)];
-    if (!target) continue;
-    const dates = new Set(target.diary?.map((entry) => entry.date));
-    target.diary?.push(
-      ...(movie.diary?.filter((entry) => !dates.has(entry.date)) ?? [])
-    );
-  }
-  return out;
-};
 
 const normalizeDiary = (diary: DiaryEntry[] | undefined): DiaryEntry[] =>
   Array.isArray(diary)
