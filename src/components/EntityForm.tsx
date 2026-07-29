@@ -8,10 +8,10 @@
 import { useMemo, useState } from 'react';
 import { useLocation } from 'wouter';
 import { Autocomplete } from './Autocomplete';
+import { MovieDiaryEditor } from './MovieDiaryEditor';
 import type { EntityKind, Id } from '@/lib/types';
 import { otherKind } from '@/lib/types';
 import { ENTITY_CONFIG } from '@/lib/entityConfig';
-import { diaryDateFor, formatDiaryDate } from '@/lib/diary';
 import { localSource, type Suggestion } from '@/lib/suggestions';
 import * as store from '@/lib/store';
 import { useGraph } from '@/lib/store';
@@ -38,8 +38,7 @@ export function EntityForm({ kind, id }: EntityFormProps) {
   );
   const [name, setName] = useState(entity?.name ?? '');
 
-  const effectiveId = subjectId;
-  const links = effectiveId ? graph.relatedIds(kind, effectiveId) : [];
+  const links = subjectId ? graph.relatedIds(kind, subjectId) : [];
   const linkedSet = useMemo(() => new Set(links), [links.join(',')]);
 
   const source = useMemo(
@@ -50,11 +49,11 @@ export function EntityForm({ kind, id }: EntityFormProps) {
   /** Ensure the subject node exists, returning its id. */
   const ensureSubject = (): Id | null => {
     const trimmed = name.trim();
-    if (effectiveId) {
+    if (subjectId) {
       if (entity && entity.name !== trimmed && trimmed) {
-        store.renameEntity(kind, effectiveId, trimmed);
+        store.renameEntity(kind, subjectId, trimmed);
       }
-      return effectiveId;
+      return subjectId;
     }
     if (!trimmed) return null;
     const created = store.upsertEntity(kind, trimmed);
@@ -77,27 +76,14 @@ export function EntityForm({ kind, id }: EntityFormProps) {
   };
 
   const removeRelated = (relatedId: Id) => {
-    if (!effectiveId) return;
-    if (kind === 'movie') store.unlinkAppearance(effectiveId, relatedId);
-    else store.unlinkAppearance(relatedId, effectiveId);
+    if (!subjectId) return;
+    if (kind === 'movie') store.unlinkAppearance(subjectId, relatedId);
+    else store.unlinkAppearance(relatedId, subjectId);
   };
 
   const removeSubject = () => {
-    if (effectiveId) store.deleteEntity(kind, effectiveId);
+    if (subjectId) store.deleteEntity(kind, subjectId);
     navigate('/');
-  };
-
-  const diaryDate = diaryDateFor();
-  const diaryText =
-    kind === 'movie' && effectiveId
-      ? (graph.movies[effectiveId]?.diary?.find(
-          (entry) => entry.date === diaryDate
-        )?.text ?? '')
-      : '';
-
-  const updateDiary = (text: string) => {
-    const movieId = ensureSubject();
-    if (movieId) store.setDiaryEntry(movieId, diaryDate, text);
   };
 
   return (
@@ -159,25 +145,14 @@ export function EntityForm({ kind, id }: EntityFormProps) {
       </section>
 
       {kind === 'movie' && (
-        <label className="field diary-editor">
-          <span className="field__label">
-            Diary · {formatDiaryDate(diaryDate)}
-          </span>
-          <textarea
-            className="field__input diary-editor__input"
-            value={diaryText}
-            placeholder={
-              name.trim()
-                ? 'Write about this viewing…'
-                : 'Add a title before writing…'
-            }
-            onChange={(event) => updateDiary(event.target.value)}
-            disabled={!name.trim()}
-          />
-        </label>
+        <MovieDiaryEditor
+          movieId={subjectId}
+          movieName={name}
+          ensureMovie={ensureSubject}
+        />
       )}
 
-      {effectiveId && (
+      {subjectId && (
         <button
           type="button"
           className="btn btn--danger"

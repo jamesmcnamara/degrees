@@ -251,8 +251,87 @@ button {
   margin-top: 1.5rem;
 }
 
+.diary-editor__label {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.diary-editor__date {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 0.15rem;
+}
+
+.diary-editor__date-input {
+  width: 8.5rem;
+  padding: 0.2rem 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  outline: none;
+}
+
+.diary-editor__date-input:focus {
+  border-color: var(--accent);
+}
+
+.field__error {
+  display: block;
+  margin: -0.15rem 0 0.4rem;
+  color: var(--danger);
+  font-size: 0.8rem;
+}
+
 .diary-editor__input {
   min-height: 14rem;
+  resize: vertical;
+}
+
+.diary-history {
+  margin-top: 1rem;
+}
+
+.diary-history__heading {
+  margin: 0 0 0.5rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.diary-history__entries {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.diary-history__entry {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.diary-history__date {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-weight: 600;
+  text-align: left;
+}
+
+.diary-history__input {
+  min-height: 8rem;
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
   resize: vertical;
 }
 
@@ -423,6 +502,19 @@ button {
   gap: 1rem;
 }
 
+.diary__filter {
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  outline: none;
+}
+
+.diary__filter:focus {
+  border-color: var(--accent);
+}
+
 .diary-entry {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -445,6 +537,18 @@ button {
 .diary-entry__date {
   color: var(--muted);
   font-size: 0.85rem;
+}
+
+.diary-entry__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.15rem 0 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  text-align: left;
 }
 
 .diary-entry__text {

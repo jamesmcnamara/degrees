@@ -64,7 +64,7 @@ test('clone returns an independent graph snapshot', () => {
   graph.setDiaryEntry(movieId, '2026-07-28', 'Changed');
 
   expect(clone).not.toBe(graph);
-  expect(clone.movies[movieId]?.diary[0]?.text).toBe('Original');
+  expect(clone.movies[movieId]?.diary?.[0]?.text).toBe('Original');
 });
 
 test('constructor gives legacy movies an empty diary', () => {

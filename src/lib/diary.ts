@@ -12,6 +12,23 @@ export const diaryDateFor = (now = new Date()): string => {
   return `${year}-${month}-${day}`;
 };
 
+export const isDiaryDate = (value: string): boolean => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return false;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(0);
+  date.setFullYear(year, month - 1, day);
+  date.setHours(12, 0, 0, 0);
+  return (
+    year > 0 &&
+    date.getFullYear() === year &&
+    date.getMonth() === month - 1 &&
+    date.getDate() === day
+  );
+};
+
 export const formatDiaryDate = (date: string): string =>
   new Intl.DateTimeFormat(undefined, {
     dateStyle: 'long'
