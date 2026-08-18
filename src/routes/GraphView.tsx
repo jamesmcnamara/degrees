@@ -4,18 +4,18 @@
  * path is highlighted in the Cytoscape view and listed as an actor chain.
  */
 
-import { useMemo, useState } from 'react';
-import { useLocation } from 'wouter';
-import type { Id } from '@/lib/types';
+import { useMemo, useState } from "react";
+import { useLocation } from "wouter";
+import type { Id } from "@/lib/types";
 import {
   localSource,
   type Suggestion,
-  type SuggestionSource
-} from '@/lib/suggestions';
-import { useGraph } from '@/lib/store';
-import { Autocomplete } from '@/components/Autocomplete';
-import { MovieGraph } from '@/components/MovieGraph';
-import type { Graph, PathResult } from '@/lib/graph';
+  type SuggestionSource,
+} from "@/lib/suggestions";
+import { useGraph } from "@/lib/store";
+import { Autocomplete } from "@/components/Autocomplete";
+import { MovieGraph } from "@/components/MovieGraph";
+import type { Graph, PathResult } from "@/lib/graph";
 
 export function GraphView() {
   const graph = useGraph();
@@ -24,17 +24,17 @@ export function GraphView() {
   const [end, setEnd] = useState<Id | null>(null);
 
   const startSource = useMemo(
-    () => localSource(graph, 'movie', new Set([end].filter(Boolean) as Id[])),
-    [graph, end]
+    () => localSource(graph, "movie", new Set([end].filter(Boolean) as Id[])),
+    [graph, end],
   );
   const endSource = useMemo(
-    () => localSource(graph, 'movie', new Set([start].filter(Boolean) as Id[])),
-    [graph, start]
+    () => localSource(graph, "movie", new Set([start].filter(Boolean) as Id[])),
+    [graph, start],
   );
 
   const path = useMemo(
     () => (start && end ? graph.shortestPath(start, end) : null),
-    [graph, start, end]
+    [graph, start, end],
   );
 
   const pickInto = (setter: (id: Id | null) => void) => (s: Suggestion) => {
@@ -91,20 +91,21 @@ function MoviePicker({
   name,
   source,
   onPick,
-  onClear
+  onClear,
 }: MoviePickerProps) {
   return (
     <div className="picker__field">
       <span className="picker__label">{label}</span>
       {movieId ? (
         <button type="button" className="chip chip--solid" onClick={onClear}>
-          {name ?? '?'} <span className="chip__remove">×</span>
+          {name ?? "?"} <span className="chip__remove">×</span>
         </button>
       ) : (
         <Autocomplete
           source={source}
           onPick={onPick}
           placeholder="Pick a movie…"
+          aria-label="Pick a movie…"
         />
       )}
     </div>
@@ -128,7 +129,7 @@ function Result({ graph, path, navigate }: ResultProps) {
   return (
     <div className="result">
       <div className="result__degrees">
-        {degrees} {degrees === 1 ? 'degree' : 'degrees'} of separation
+        {degrees} {degrees === 1 ? "degree" : "degrees"} of separation
       </div>
       <div className="chain">
         {path.movies.map((movieId, i) => (

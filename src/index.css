@@ -8,6 +8,7 @@
   --accent: #88c0d0;
   --accent-2: #a3be8c;
   --danger: #bf616a;
+  --action: #88c0d0;
   --radius: 12px;
   font-family:
     Inter,
@@ -34,7 +35,8 @@ body {
 }
 
 button,
-input {
+input,
+textarea {
   font: inherit;
   color: inherit;
 }
@@ -73,6 +75,8 @@ button {
 .appbar__brand {
   font-weight: 700;
   font-size: 1.15rem;
+  text-decoration: none;
+  color: var(--text);
 }
 
 .appbar__back {
@@ -90,6 +94,68 @@ button {
   color: var(--accent);
   text-decoration: none;
   font-weight: 600;
+}
+
+.appbar__actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.appbar__menu {
+  position: relative;
+}
+
+.appbar__menu-toggle {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border-radius: 999px;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  list-style: none;
+}
+
+.appbar__menu-toggle::-webkit-details-marker {
+  display: none;
+}
+
+.appbar__menu-toggle:hover,
+.appbar__menu-toggle:focus-visible {
+  background: var(--surface-2);
+  outline: none;
+}
+
+.appbar__menu-panel {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  min-width: 10rem;
+  padding: 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: 0 0.75rem 2rem rgb(0 0 0 / 35%);
+}
+
+.appbar__menu-action {
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  text-align: left;
+}
+
+.appbar__menu-action:hover,
+.appbar__menu-action:focus-visible {
+  background: var(--surface-2);
+  outline: none;
+}
+
+.appbar__menu-action--danger {
+  color: var(--danger);
 }
 
 .content {
@@ -118,9 +184,9 @@ button {
   font-size: 0.9rem;
 }
 
-.btn--danger {
-  border-color: var(--danger);
-  color: var(--danger);
+.btn--action {
+  border-color: var(--action);
+  color: var(--action);
   background: transparent;
   width: 100%;
   margin-top: 1.5rem;
@@ -235,6 +301,101 @@ button {
 .field__input:focus,
 .autocomplete__input:focus {
   border-color: var(--accent);
+}
+
+.field__input:disabled {
+  opacity: 0.6;
+}
+
+.diary-editor {
+  margin-top: 1.5rem;
+}
+
+.diary-editor__label {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.diary-editor__date {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 0.15rem;
+}
+
+.diary-editor__date-input {
+  width: 8.5rem;
+  padding: 0.2rem 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  outline: none;
+}
+
+.diary-editor__date-input:focus {
+  border-color: var(--accent);
+}
+
+.field__error {
+  display: block;
+  text-transform: none;
+  margin: 0.15rem 0 0.4rem;
+  color: var(--danger);
+  font-size: 0.8rem;
+}
+
+.diary-editor__input {
+  min-height: 14rem;
+  resize: vertical;
+}
+
+.diary-history {
+  margin-top: 1rem;
+}
+
+.diary-history__heading {
+  margin: 0 0 0.5rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.diary-history__entries {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.diary-history__entry {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.diary-history__date {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-weight: 600;
+  text-align: left;
+}
+
+.diary-history__input {
+  min-height: 20rem;
+  overflow: hidden;
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  resize: vertical;
 }
 
 .related__heading {
@@ -394,6 +555,70 @@ button {
   color: var(--accent-2);
   font-size: 0.9rem;
   text-align: left;
+}
+
+/* --- diary ------------------------------------------------------------- */
+
+.diary {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.diary__filter {
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  outline: none;
+}
+
+.diary__filter:focus {
+  border-color: var(--accent);
+}
+
+.diary-entry {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+}
+
+.diary-entry__header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.diary-entry__movie {
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.diary-entry__date {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.diary-entry__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.15rem 0 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  text-align: left;
+}
+
+.diary-entry__text {
+  margin: 0.75rem 0 0;
+  white-space: pre-wrap;
+  min-height: 12rem;
+  resize: vertical;
 }
 
 @media (prefers-reduced-motion) {

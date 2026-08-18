@@ -7,8 +7,8 @@
  * `mergeSources` without touching the components.
  */
 
-import type { EntityKind, Id } from './types';
-import type { Graph } from './graph';
+import type { EntityKind, Id } from "./types";
+import type { Graph } from "./graph";
 
 export interface Suggestion {
   /** Present when the suggestion already exists in the local graph. */
@@ -17,7 +17,7 @@ export interface Suggestion {
 }
 
 export type SuggestionSource = (
-  query: string
+  query: string,
 ) => Suggestion[] | Promise<Suggestion[]>;
 
 /** Search the local graph for entities of `kind`, excluding some ids. */
@@ -25,10 +25,10 @@ export const localSource =
   (
     data: Graph,
     kind: EntityKind,
-    exclude: Set<Id> = new Set()
+    exclude: Set<Id> = new Set(),
   ): SuggestionSource =>
   (query) => {
-    const collection = kind === 'movie' ? data.movies : data.actors;
+    const collection = kind === "movie" ? data.movies : data.actors;
     const q = query.trim().toLowerCase();
     return Object.values(collection)
       .filter((e) => !exclude.has(e.id))

@@ -86,6 +86,7 @@ export function Autocomplete({
         className="autocomplete__input"
         value={query}
         placeholder={placeholder}
+        aria-label={placeholder}
         onChange={(e) => {
           setQuery(e.target.value);
           setOpen(true);
@@ -112,7 +113,8 @@ export function Autocomplete({
                   opt.label
                 ) : (
                   <>
-                    <span className="autocomplete__add">+ Add</span> “{opt.label}”
+                    <span className="autocomplete__add">+ Add</span> “
+                    {opt.label}”
                   </>
                 )}
               </button>
