@@ -391,6 +391,7 @@ button {
 
 .diary-history__input {
   min-height: 20rem;
+  overflow: hidden;
   border: 0;
   border-top: 1px solid var(--border);
   border-radius: 0;
@@ -616,6 +617,8 @@ button {
 .diary-entry__text {
   margin: 0.75rem 0 0;
   white-space: pre-wrap;
+  min-height: 12rem;
+  resize: vertical;
 }
 
 @media (prefers-reduced-motion) {

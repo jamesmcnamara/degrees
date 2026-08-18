@@ -2,7 +2,8 @@ import { diaryDateFor, formatDiaryDate } from "@/lib/diary";
 import * as store from "@/lib/store";
 import { useGraph } from "@/lib/store";
 import type { Id } from "@/lib/types";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { AutoTextarea } from "./AutoTextarea";
 import { DateEntry } from "./DateEntry";
 
 interface MovieDiaryEditorProps {
@@ -23,6 +24,7 @@ export function MovieDiaryEditor({
 
   const [isMusing, setIsMusing] = useState(false);
   const [musing, setMusing] = useState("");
+  const diaryRef = useRef<HTMLTextAreaElement>(null);
 
   const movie = movieId ? graph.movies[movieId] : undefined;
   const diaryText = movie
@@ -48,6 +50,10 @@ export function MovieDiaryEditor({
       updateDiary(`${diaryText.trim()}${diaryText ? "\n\n" : ""}${musing}`);
       setMusing("");
       setIsMusing(false);
+      requestAnimationFrame(() => {
+        const textarea = diaryRef.current;
+        if (textarea) textarea.scrollTop = textarea.scrollHeight;
+      });
     } else {
       setIsMusing(true);
       setMusing("");
@@ -73,6 +79,7 @@ export function MovieDiaryEditor({
       </div>
       <textarea
         id="diary-text"
+        ref={diaryRef}
         className="field__input diary-editor__input"
         value={diaryText}
         placeholder="Tell me your highdeas…"
@@ -115,7 +122,7 @@ export function MovieDiaryEditor({
                     {formatDiaryDate(entry.date)}
                   </button>
                   {expanded && (
-                    <textarea
+                    <AutoTextarea
                       id={contentId}
                       className="field__input diary-history__input"
                       value={entry.text}
