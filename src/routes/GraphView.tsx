@@ -105,6 +105,7 @@ function MoviePicker({
           source={source}
           onPick={onPick}
           placeholder="Pick a movie…"
+          aria-label="Pick a movie…"
         />
       )}
     </div>

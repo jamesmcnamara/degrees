@@ -57,6 +57,7 @@ function EntityList({ kind, entities }: EntityListProps) {
         name={`${kind}-search`}
         className="list__search"
         placeholder={`Search ${config.noun.toLowerCase()}s…`}
+        aria-label={`Search ${config.noun.toLowerCase()}s`}
         value={search ?? ""}
         onChange={(e) => setSearch(e.target.value)}
       />

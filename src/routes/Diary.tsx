@@ -29,9 +29,9 @@ export function Diary() {
         type="search"
         className="diary__filter"
         placeholder="Filter diary entries…"
+        aria-label="Filter diary entries"
         value={filter}
         onChange={(event) => setFilter(event.target.value)}
-        aria-label="Filter diary entries"
       />
       {filteredEntries.length > 0 ? (
         filteredEntries.map((entry) => (

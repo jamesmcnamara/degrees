@@ -89,6 +89,7 @@ export function EntityForm({ kind, id }: EntityFormProps) {
           className="field__input"
           value={name}
           placeholder={config.nameLabel}
+          aria-label={config.nameLabel}
           onChange={(e) => setName(e.target.value)}
           onBlur={onNameBlur}
           autoCapitalize="words"

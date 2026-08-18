@@ -1,4 +1,4 @@
-import { diaryDateFor, formatDiaryDate, isDiaryDate } from "@/lib/diary";
+import { diaryDateFor, formatDiaryDate } from "@/lib/diary";
 import * as store from "@/lib/store";
 import { useGraph } from "@/lib/store";
 import type { Id } from "@/lib/types";
@@ -76,6 +76,7 @@ export function MovieDiaryEditor({
         className="field__input diary-editor__input"
         value={diaryText}
         placeholder="Tell me your highdeas…"
+        aria-label="Tell me your highdeas…"
         onChange={(event) => updateDiary(event.target.value)}
         disabled={!movieName.trim()}
       />
@@ -85,6 +86,7 @@ export function MovieDiaryEditor({
           value={musing}
           onChange={(event) => setMusing(event.target.value)}
           placeholder="Share your musing…"
+          aria-label="Share your musing…"
           autoFocus
         />
       )}
