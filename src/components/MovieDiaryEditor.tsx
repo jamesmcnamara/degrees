@@ -24,6 +24,7 @@ export function MovieDiaryEditor({
 
   const [isMusing, setIsMusing] = useState(false);
   const [musing, setMusing] = useState("");
+  const [rating, setRating] = useState<number | null>(null);
   const diaryRef = useRef<HTMLTextAreaElement>(null);
 
   const movie = movieId ? graph.movies[movieId] : undefined;
@@ -58,6 +59,18 @@ export function MovieDiaryEditor({
       setIsMusing(true);
       setMusing("");
     }
+  }
+
+  function submitRating() {
+    if (rating === null) return;
+    updateDiary(
+      `${diaryText.trim()}${diaryText.trim() ? "\n\n" : ""}** ${rating} / 10 **`,
+    );
+    setRating(null);
+    requestAnimationFrame(() => {
+      const textarea = diaryRef.current;
+      if (textarea) textarea.scrollTop = textarea.scrollHeight;
+    });
   }
 
   return (
@@ -100,6 +113,41 @@ export function MovieDiaryEditor({
       <button type="button" className="btn btn--action" onClick={muse}>
         {isMusing ? "Mischief Managed" : "Add Musing"}
       </button>
+
+      <div className="diary-rating">
+        <div
+          className="diary-rating__stars"
+          role="radiogroup"
+          aria-label="Rating out of 10"
+        >
+          {Array.from({ length: 10 }, (_, index) => {
+            const value = index + 1;
+            const filled = rating !== null && value <= rating;
+            return (
+              <button
+                key={value}
+                type="button"
+                role="radio"
+                aria-checked={rating === value}
+                aria-label={`${value} out of 10`}
+                className={`diary-rating__star${filled ? " diary-rating__star--filled" : ""}`}
+                onClick={() => setRating(value)}
+              >
+                {filled ? "★" : "☆"}
+              </button>
+            );
+          })}
+        </div>
+        {rating !== null && (
+          <button
+            type="button"
+            className="btn btn--action"
+            onClick={submitRating}
+          >
+            Submit {rating} / 10
+          </button>
+        )}
+      </div>
 
       {historicalEntries.length > 0 && (
         <div className="diary-history">

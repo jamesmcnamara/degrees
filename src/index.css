@@ -353,6 +353,31 @@ button {
   resize: vertical;
 }
 
+.diary-rating {
+  margin-top: 1rem;
+}
+
+.diary-rating__stars {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.25rem;
+}
+
+.diary-rating__star {
+  flex: 1;
+  padding: 0.2rem 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.diary-rating__star--filled {
+  color: var(--accent);
+}
+
 .diary-history {
   margin-top: 1rem;
 }
