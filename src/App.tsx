@@ -1,12 +1,12 @@
-import { Link, Route, Switch, useLocation } from 'wouter';
-import { Home } from './routes/Home';
-import { GraphView } from './routes/GraphView';
-import { Diary } from './routes/Diary';
-import { EntityForm } from './components/EntityForm';
-import { ENTITY_CONFIG } from './lib/entityConfig';
-import * as store from './lib/store';
-import type { EntityKind, Id } from './lib/types';
-import './index.css';
+import { Link, Route, Switch, useLocation } from "wouter";
+import { Home } from "./routes/Home";
+import { GraphView } from "./routes/GraphView";
+import { Diary } from "./routes/Diary";
+import { EntityForm } from "./components/EntityForm";
+import { ENTITY_CONFIG } from "./lib/entityConfig";
+import * as store from "./lib/store";
+import type { EntityKind, Id } from "./lib/types";
+import "./index.css";
 
 export function App() {
   return (
@@ -39,13 +39,13 @@ export function App() {
 function Header() {
   const [location, navigate] = useLocation();
   const title = titleFor(location);
-  const atRoot = location === '/';
+  const atRoot = location === "/";
   const entityRoute = entityRouteFor(location);
 
   const removeSubject = () => {
     if (!entityRoute) return;
     store.deleteEntity(entityRoute.kind, entityRoute.id);
-    navigate('/');
+    navigate("/");
   };
 
   return (
@@ -99,28 +99,28 @@ interface EntityRoute {
 }
 
 const entityRouteFor = (location: string): EntityRoute | null => {
-  for (const kind of ['movie', 'actor'] as EntityKind[]) {
+  for (const kind of ["movie", "actor"] as EntityKind[]) {
     const prefix = `/${kind}/`;
     if (location.startsWith(prefix)) {
       const id = location.slice(prefix.length);
-      return id && id !== 'new' ? { kind, id } : null;
+      return id && id !== "new" ? { kind, id } : null;
     }
   }
   return null;
 };
 
 const titleFor = (location: string): string => {
-  if (location === '/graph') return 'Connection';
-  if (location === '/diary') return 'Diary';
-  for (const kind of ['movie', 'actor'] as EntityKind[]) {
+  if (location === "/graph") return "Connection";
+  if (location === "/diary") return "Diary";
+  for (const kind of ["movie", "actor"] as EntityKind[]) {
     if (location.startsWith(`/${kind}/`)) {
-      const id = location.split('/')[2];
-      return id === 'new'
+      const id = location.split("/")[2];
+      return id === "new"
         ? `New ${ENTITY_CONFIG[kind].noun}`
         : ENTITY_CONFIG[kind].noun;
     }
   }
-  return 'Home';
+  return "Home";
 };
 
 export default App;

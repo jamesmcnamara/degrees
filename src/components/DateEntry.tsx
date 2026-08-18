@@ -1,5 +1,5 @@
-import { isDiaryDate } from '@/lib/diary';
-import { useState } from 'react';
+import { isDiaryDate } from "@/lib/diary";
+import { useState } from "react";
 
 interface DateEntryProps {
   date: string;
@@ -13,7 +13,7 @@ export function DateEntry({ date, setDate }: DateEntryProps) {
   function commit(date: string = draft) {
     const nextDate = date.trim();
     if (!isDiaryDate(nextDate)) {
-      setError('Enter a valid date as YYYY-MM-DD.');
+      setError("Enter a valid date as YYYY-MM-DD.");
       return;
     }
     setDate(nextDate);
@@ -31,10 +31,10 @@ export function DateEntry({ date, setDate }: DateEntryProps) {
         }}
         onBlur={() => commit()}
         onKeyDown={(event) => {
-          if (event.key === 'Enter') {
+          if (event.key === "Enter") {
             event.preventDefault();
             commit();
-          } else if (event.key === 'Escape') {
+          } else if (event.key === "Escape") {
             commit(date);
           }
         }}

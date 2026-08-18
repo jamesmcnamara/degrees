@@ -1,6 +1,6 @@
-import { formatDiaryDate, type MovieDiaryEntry } from '@/lib/diary';
-import { useState } from 'react';
-import { Link } from 'wouter';
+import { formatDiaryDate, type MovieDiaryEntry } from "@/lib/diary";
+import { useState } from "react";
+import { Link } from "wouter";
 
 interface DiaryEntryProps {
   entry: MovieDiaryEntry;
@@ -13,10 +13,7 @@ export function DiaryEntry({ entry }: DiaryEntryProps) {
   return (
     <article className="diary-entry">
       <header className="diary-entry__header">
-        <Link
-          href={`/movie/${entry.movie.id}`}
-          className="diary-entry__movie"
-        >
+        <Link href={`/movie/${entry.movie.id}`} className="diary-entry__movie">
           {entry.movie.name}
         </Link>
         <button
@@ -29,7 +26,7 @@ export function DiaryEntry({ entry }: DiaryEntryProps) {
           <time className="diary-entry__date" dateTime={entry.date}>
             {formatDiaryDate(entry.date)}
           </time>
-          <span aria-hidden="true">{expanded ? '−' : '+'}</span>
+          <span aria-hidden="true">{expanded ? "−" : "+"}</span>
         </button>
       </header>
       {expanded && (

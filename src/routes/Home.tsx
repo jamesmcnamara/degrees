@@ -1,19 +1,19 @@
 /** Landing screen: jump into the game or manage movies and actors. */
 
-import { ENTITY_CONFIG } from '@/lib/entityConfig';
-import * as store from '@/lib/store';
-import { useGraph } from '@/lib/store';
-import type { EntityKind } from '@/lib/types';
-import { useState } from 'react';
-import { Link, useLocation } from 'wouter';
+import { ENTITY_CONFIG } from "@/lib/entityConfig";
+import * as store from "@/lib/store";
+import { useGraph } from "@/lib/store";
+import type { EntityKind } from "@/lib/types";
+import { useState } from "react";
+import { Link, useLocation } from "wouter";
 
 export function Home() {
   const data = useGraph();
   const movies = Object.values(data.movies).sort((a, b) =>
-    normalize(a.name).localeCompare(normalize(b.name))
+    normalize(a.name).localeCompare(normalize(b.name)),
   );
   const actors = Object.values(data.actors).sort((a, b) =>
-    normalize(a.name).localeCompare(normalize(b.name))
+    normalize(a.name).localeCompare(normalize(b.name)),
   );
 
   return (
@@ -48,7 +48,7 @@ function EntityList({ kind, entities }: EntityListProps) {
         <h2>
           {config.noun}s <span className="muted">({entities.length})</span>
         </h2>
-        <Link href={config.path('new')} className="btn btn--small">
+        <Link href={config.path("new")} className="btn btn--small">
           + Add
         </Link>
       </header>
@@ -57,7 +57,7 @@ function EntityList({ kind, entities }: EntityListProps) {
         name={`${kind}-search`}
         className="list__search"
         placeholder={`Search ${config.noun.toLowerCase()}s…`}
-        value={search ?? ''}
+        value={search ?? ""}
         onChange={(e) => setSearch(e.target.value)}
       />
       {entities.length === 0 ? (
@@ -93,4 +93,4 @@ const normalize = (s: string) =>
   s
     .trim()
     .toLowerCase()
-    .replace(/^the\s+/, '');
+    .replace(/^the\s+/, "");

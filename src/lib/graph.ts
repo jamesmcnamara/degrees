@@ -6,8 +6,9 @@
  * when they share an actor.
  */
 
-import { filter, map, not, some } from 'shades';
-import { newId } from './id';
+import { produce } from "immer";
+import { filter, map, not, some } from "shades";
+import { newId } from "./id";
 import type {
   Appearance,
   DiaryEntry,
@@ -15,19 +16,31 @@ import type {
   EntityKind,
   GraphData,
   Id,
-  Movie
-} from './types';
+  Movie,
+} from "./types";
 
+interface GraphOptions {
+  data?: GraphData;
+  isCloning?: boolean;
+}
 export class Graph {
   private _data: GraphData = {
     movies: {},
     actors: {},
-    appearances: []
+    appearances: [],
   };
 
-  constructor(data?: GraphData) {
+  constructor({ data, isCloning }: GraphOptions = {}) {
     if (data) {
       this._data = data;
+    }
+    if (!isCloning) {
+      // Normalize diary entries and entity names on construction.
+      this._data = produce(this._data, (draft) => {
+        for (const movie of Object.values(draft.movies)) {
+          movie.diary = normalizeDiary(movie.diary);
+        }
+      });
     }
   }
 
@@ -47,7 +60,7 @@ export class Graph {
     if (!name) return undefined;
     const target = name.trim().toLowerCase();
     return Object.values(
-      kind === 'movie' ? this._data.movies : this._data.actors
+      kind === "movie" ? this._data.movies : this._data.actors,
     ).find((e) => e.name.toLowerCase() === target)?.id;
   }
 
@@ -57,26 +70,32 @@ export class Graph {
     if (existing) return existing;
 
     const id = newId();
-    if (kind === 'movie') {
-      this._data.movies[id] = { id, name, diary: [] };
-    } else {
-      this._data.actors[id] = { id, name };
-    }
+    this._data = produce(this._data, (draft) => {
+      if (kind === "movie") {
+        draft.movies[id] = { id, name, diary: [] };
+      } else {
+        draft.actors[id] = { id, name };
+      }
+    });
     return id;
   }
 
   rename(kind: EntityKind, id: Id, name: string) {
-    const entity = this._data[kind === 'movie' ? 'movies' : 'actors'][id];
-    if (entity) {
-      entity.name = name;
-    }
+    this._data = produce(this._data, (draft) => {
+      const entity = draft[kind === "movie" ? "movies" : "actors"][id];
+      if (entity) {
+        entity.name = name;
+      }
+    });
   }
 
   delete(kind: EntityKind, id: Id) {
-    const key = kind === 'movie' ? 'movies' : 'actors';
-    delete this._data[key][id];
-    const matcher = kind === 'movie' ? { movieId: id } : { actorId: id };
-    this._data.appearances = filter(not(matcher))(this._data.appearances);
+    const key = kind === "movie" ? "movies" : "actors";
+    const matcher = kind === "movie" ? { movieId: id } : { actorId: id };
+    this._data = produce(this._data, (draft) => {
+      delete draft[key][id];
+      draft.appearances = filter(not(matcher))(draft.appearances);
+    });
   }
 
   private hasAppearance = (movieId?: Id, actorId?: Id) =>
@@ -84,48 +103,46 @@ export class Graph {
 
   hasAppearanceByName = (movie?: string, actor?: string) => {
     return this.hasAppearance(
-      this.findByName('movie', movie),
-      this.findByName('actor', actor)
+      this.findByName("movie", movie),
+      this.findByName("actor", actor),
     );
   };
 
   link(movieId: Id, actorId: Id) {
     if (!this.hasAppearance(movieId, actorId)) {
-      this._data.appearances.push({ movieId, actorId });
+      this._data = produce(this._data, (draft) => {
+        draft.appearances.push({ movieId, actorId });
+      });
     }
   }
 
-  private linkByName = (movie: string, actor: string) => {
-    const movieId = this.findByName('movie', movie);
-    const actorId = this.findByName('actor', actor);
-    if (movieId && actorId) this.link(movieId, actorId);
-  };
-
   unlink(movieId: Id, actorId: Id) {
-    this._data.appearances = filter(not({ movieId, actorId }))(
-      this._data.appearances
-    );
+    this._data = produce(this._data, (draft) => {
+      draft.appearances = filter(not({ movieId, actorId }))(draft.appearances);
+    });
   }
 
   setDiaryEntry(movieId: Id, date: string, text: string) {
-    const movie = this._data.movies[movieId];
-    if (!movie) {
-      return;
-    }
-    const existing = movie.diary?.find((entry) => entry.date === date);
-    if (existing) {
-      existing.text = text;
-    } else {
-      movie.diary = movie.diary ?? [];
-      movie.diary.push({ date, text });
-    }
+    this._data = produce(this._data, (draft) => {
+      const movie = draft.movies[movieId];
+      if (!movie) {
+        return;
+      }
+      const existing = movie.diary?.find((entry) => entry.date === date);
+      if (existing) {
+        existing.text = text;
+      } else {
+        movie.diary = movie.diary ?? [];
+        movie.diary.push({ date, text });
+      }
+    });
   }
 
   /** Ids of entities linked to `id` (the opposite kind). */
   relatedIds = (kind: EntityKind, id: Id): Id[] =>
-    kind === 'movie'
-      ? map('actorId')(filter({ movieId: id })(this._data.appearances))
-      : map('movieId')(filter({ actorId: id })(this._data.appearances));
+    kind === "movie"
+      ? map("actorId")(filter({ movieId: id })(this._data.appearances))
+      : map("movieId")(filter({ actorId: id })(this._data.appearances));
 
   /** Build movie-vs-movie edges (one per pair, listing every shared actor). */
   movieProjection = (): ProjectionEdge[] => {
@@ -181,9 +198,12 @@ export class Graph {
     return null;
   };
 
-  // Shallow clone because we only need the top-level object identity to change to trigger reactivity.
+  // Cheap "clone": Graph mutators always replace `_data` with a fresh
+  // immer-produced object (structural sharing, no deep copy), so wrapping
+  // the current `_data` in a new Graph gives an independent, stable
+  // snapshot without copying the whole graph.
   clone(): Graph {
-    return new Graph(this._data);
+    return new Graph({ data: this._data, isCloning: true });
   }
 
   stringify() {
@@ -195,7 +215,7 @@ const normalizeDiary = (diary: DiaryEntry[] | undefined): DiaryEntry[] =>
   Array.isArray(diary)
     ? diary.filter(
         (entry) =>
-          typeof entry?.date === 'string' && typeof entry.text === 'string'
+          typeof entry?.date === "string" && typeof entry.text === "string",
       )
     : [];
 
@@ -245,7 +265,7 @@ interface MovieLink {
 const reconstruct = (
   prev: Map<Id, MovieLink>,
   start: Id,
-  end: Id
+  end: Id,
 ): PathResult => {
   const movies: Id[] = [end];
   const actors: Id[] = [];

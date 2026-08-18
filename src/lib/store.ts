@@ -3,10 +3,10 @@
  * All mutations persist to localStorage and publish a fresh Graph snapshot.
  */
 
-import { useSyncExternalStore } from 'react';
-import type { EntityKind, Id } from './types';
-import { load, save } from './storage';
-import { Graph } from './graph';
+import { useSyncExternalStore } from "react";
+import type { EntityKind, Id } from "./types";
+import { load, save } from "./storage";
+import { Graph } from "./graph";
 
 let state: Graph = load();
 const listeners = new Set<() => void>();
@@ -61,7 +61,7 @@ export const unlinkAppearance = (movieId: Id, actorId: Id): void => {
 export const setDiaryEntry = (
   movieId: Id,
   date: string,
-  text: string
+  text: string,
 ): void => {
   state.setDiaryEntry(movieId, date, text);
   set(state);

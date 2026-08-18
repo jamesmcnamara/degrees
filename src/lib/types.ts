@@ -3,7 +3,7 @@
 export type Id = string;
 
 /** The two kinds of node in the bipartite graph. */
-export type EntityKind = 'movie' | 'actor';
+export type EntityKind = "movie" | "actor";
 
 /** A node. Movies and actors share the same shape; `name` is the display string. */
 export interface Entity {
@@ -36,4 +36,4 @@ export interface GraphData {
 
 /** The kind opposite to the given one. */
 export const otherKind = (kind: EntityKind): EntityKind =>
-  kind === 'movie' ? 'actor' : 'movie';
+  kind === "movie" ? "actor" : "movie";

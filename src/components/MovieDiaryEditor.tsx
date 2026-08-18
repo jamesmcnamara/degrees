@@ -1,9 +1,9 @@
-import { diaryDateFor, formatDiaryDate, isDiaryDate } from '@/lib/diary';
-import * as store from '@/lib/store';
-import { useGraph } from '@/lib/store';
-import type { Id } from '@/lib/types';
-import { useState } from 'react';
-import { DateEntry } from './DateEntry';
+import { diaryDateFor, formatDiaryDate, isDiaryDate } from "@/lib/diary";
+import * as store from "@/lib/store";
+import { useGraph } from "@/lib/store";
+import type { Id } from "@/lib/types";
+import { useState } from "react";
+import { DateEntry } from "./DateEntry";
 
 interface MovieDiaryEditorProps {
   movieId: Id | null;
@@ -14,7 +14,7 @@ interface MovieDiaryEditorProps {
 export function MovieDiaryEditor({
   movieId,
   movieName,
-  ensureMovie
+  ensureMovie,
 }: MovieDiaryEditorProps) {
   const graph = useGraph();
   const [diaryDate, setDiaryDate] = useState(diaryDateFor);
@@ -22,12 +22,12 @@ export function MovieDiaryEditor({
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
 
   const [isMusing, setIsMusing] = useState(false);
-  const [musing, setMusing] = useState('');
+  const [musing, setMusing] = useState("");
 
   const movie = movieId ? graph.movies[movieId] : undefined;
   const diaryText = movie
-    ? (movie.diary?.find((entry) => entry.date === diaryDate)?.text ?? '')
-    : '';
+    ? (movie.diary?.find((entry) => entry.date === diaryDate)?.text ?? "")
+    : "";
   const today = diaryDateFor();
   const historicalEntries = (movie?.diary ?? [])
     .filter((entry) => entry.date < today && entry.date !== diaryDate)
@@ -45,12 +45,12 @@ export function MovieDiaryEditor({
 
   function muse() {
     if (isMusing) {
-      updateDiary(`${diaryText.trim()}${diaryText ? '\n\n' : ''}${musing}`);
-      setMusing('');
+      updateDiary(`${diaryText.trim()}${diaryText ? "\n\n" : ""}${musing}`);
+      setMusing("");
       setIsMusing(false);
     } else {
       setIsMusing(true);
-      setMusing('');
+      setMusing("");
     }
   }
 
@@ -89,7 +89,7 @@ export function MovieDiaryEditor({
         />
       )}
       <button type="button" className="btn btn--action" onClick={muse}>
-        {isMusing ? 'Mischief Managed' : 'Add Musing'}
+        {isMusing ? "Mischief Managed" : "Add Musing"}
       </button>
 
       {historicalEntries.length > 0 && (
@@ -122,7 +122,7 @@ export function MovieDiaryEditor({
                           store.setDiaryEntry(
                             movieId,
                             entry.date,
-                            event.target.value
+                            event.target.value,
                           );
                         }
                       }}

@@ -112,7 +112,8 @@ export function Autocomplete({
                   opt.label
                 ) : (
                   <>
-                    <span className="autocomplete__add">+ Add</span> “{opt.label}”
+                    <span className="autocomplete__add">+ Add</span> “
+                    {opt.label}”
                   </>
                 )}
               </button>

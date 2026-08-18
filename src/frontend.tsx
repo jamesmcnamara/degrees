@@ -8,7 +8,11 @@ import { createRoot } from "react-dom/client";
 import { App } from "./App";
 
 // Link the PWA manifest and icons (served by the Bun server, not bundled).
-const head = (rel: string, href: string, extra: Record<string, string> = {}) => {
+const head = (
+  rel: string,
+  href: string,
+  extra: Record<string, string> = {},
+) => {
   if (document.querySelector(`link[rel="${rel}"][href="${href}"]`)) return;
   const link = document.createElement("link");
   link.rel = rel;
@@ -52,13 +56,17 @@ if ("serviceWorker" in navigator) {
     const precacheLoaded = () => {
       const ctrl = navigator.serviceWorker.controller;
       if (!ctrl) return;
-      const urls = [location.href, ...performance.getEntriesByType("resource").map((e) => e.name)].filter(
-        (u) => new URL(u, location.origin).origin === location.origin,
-      );
+      const urls = [
+        location.href,
+        ...performance.getEntriesByType("resource").map((e) => e.name),
+      ].filter((u) => new URL(u, location.origin).origin === location.origin);
       ctrl.postMessage({ type: "cache-urls", urls });
     };
 
     precacheLoaded();
-    navigator.serviceWorker.addEventListener("controllerchange", precacheLoaded);
+    navigator.serviceWorker.addEventListener(
+      "controllerchange",
+      precacheLoaded,
+    );
   });
 }
