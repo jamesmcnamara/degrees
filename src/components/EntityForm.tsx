@@ -5,20 +5,21 @@
  * tapping one navigates to its form.
  */
 
-import { useMemo, useState } from 'react';
-import { useLocation } from 'wouter';
-import { Autocomplete } from './Autocomplete';
-import type { EntityKind, Id } from '@/lib/types';
-import { otherKind } from '@/lib/types';
-import { ENTITY_CONFIG } from '@/lib/entityConfig';
-import { localSource, type Suggestion } from '@/lib/suggestions';
-import * as store from '@/lib/store';
-import { useGraph } from '@/lib/store';
+import { useMemo, useState } from "react";
+import { useLocation } from "wouter";
+import { Autocomplete } from "./Autocomplete";
+import { MovieDiaryEditor } from "./MovieDiaryEditor";
+import type { EntityKind, Id } from "@/lib/types";
+import { otherKind } from "@/lib/types";
+import { ENTITY_CONFIG } from "@/lib/entityConfig";
+import { localSource, type Suggestion } from "@/lib/suggestions";
+import * as store from "@/lib/store";
+import { useGraph } from "@/lib/store";
 
 interface EntityFormProps {
   kind: EntityKind;
   /** Existing entity id, or "new" to create one. */
-  id: Id | 'new';
+  id: Id | "new";
 }
 
 export function EntityForm({ kind, id }: EntityFormProps) {
@@ -28,32 +29,31 @@ export function EntityForm({ kind, id }: EntityFormProps) {
   const related = otherKind(kind);
   const relatedConfig = ENTITY_CONFIG[related];
 
-  const collection = kind === 'movie' ? graph.movies : graph.actors;
-  const entity = id === 'new' ? undefined : collection[id];
+  const collection = kind === "movie" ? graph.movies : graph.actors;
+  const entity = id === "new" ? undefined : collection[id];
 
   // The subject is created lazily on first link / first save.
   const [subjectId, setSubjectId] = useState<Id | null>(
-    id === 'new' ? null : id
+    id === "new" ? null : id,
   );
-  const [name, setName] = useState(entity?.name ?? '');
+  const [name, setName] = useState(entity?.name ?? "");
 
-  const effectiveId = subjectId;
-  const links = effectiveId ? graph.relatedIds(kind, effectiveId) : [];
-  const linkedSet = useMemo(() => new Set(links), [links.join(',')]);
+  const links = subjectId ? graph.relatedIds(kind, subjectId) : [];
+  const linkedSet = useMemo(() => new Set(links), [links.join(",")]);
 
   const source = useMemo(
     () => localSource(graph, related, linkedSet),
-    [graph, related, linkedSet]
+    [graph, related, linkedSet],
   );
 
   /** Ensure the subject node exists, returning its id. */
   const ensureSubject = (): Id | null => {
     const trimmed = name.trim();
-    if (effectiveId) {
+    if (subjectId) {
       if (entity && entity.name !== trimmed && trimmed) {
-        store.renameEntity(kind, effectiveId, trimmed);
+        store.renameEntity(kind, subjectId, trimmed);
       }
-      return effectiveId;
+      return subjectId;
     }
     if (!trimmed) return null;
     const created = store.upsertEntity(kind, trimmed);
@@ -71,19 +71,14 @@ export function EntityForm({ kind, id }: EntityFormProps) {
     if (!owner) return;
     const relatedId =
       suggestion.id ?? store.upsertEntity(related, suggestion.label);
-    if (kind === 'movie') store.linkAppearance(owner, relatedId);
+    if (kind === "movie") store.linkAppearance(owner, relatedId);
     else store.linkAppearance(relatedId, owner);
   };
 
   const removeRelated = (relatedId: Id) => {
-    if (!effectiveId) return;
-    if (kind === 'movie') store.unlinkAppearance(effectiveId, relatedId);
-    else store.unlinkAppearance(relatedId, effectiveId);
-  };
-
-  const removeSubject = () => {
-    if (effectiveId) store.deleteEntity(kind, effectiveId);
-    navigate('/');
+    if (!subjectId) return;
+    if (kind === "movie") store.unlinkAppearance(subjectId, relatedId);
+    else store.unlinkAppearance(relatedId, subjectId);
   };
 
   return (
@@ -94,10 +89,11 @@ export function EntityForm({ kind, id }: EntityFormProps) {
           className="field__input"
           value={name}
           placeholder={config.nameLabel}
+          aria-label={config.nameLabel}
           onChange={(e) => setName(e.target.value)}
           onBlur={onNameBlur}
           autoCapitalize="words"
-          autoFocus={id === 'new'}
+          autoFocus={id === "new"}
         />
       </label>
 
@@ -108,7 +104,7 @@ export function EntityForm({ kind, id }: EntityFormProps) {
           <ul className="chips">
             {links.map((relatedId) => {
               const relatedEntity =
-                related === 'movie'
+                related === "movie"
                   ? graph.movies[relatedId]
                   : graph.actors[relatedId];
               if (!relatedEntity) return null;
@@ -144,14 +140,12 @@ export function EntityForm({ kind, id }: EntityFormProps) {
         />
       </section>
 
-      {effectiveId && (
-        <button
-          type="button"
-          className="btn btn--danger"
-          onClick={removeSubject}
-        >
-          Delete {config.noun}
-        </button>
+      {kind === "movie" && (
+        <MovieDiaryEditor
+          movieId={subjectId}
+          movieName={name}
+          ensureMovie={ensureSubject}
+        />
       )}
     </div>
   );

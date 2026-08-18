@@ -6,40 +6,61 @@
  * when they share an actor.
  */
 
-import { filter, map, not, some } from 'shades';
-import { newId } from './id';
-import type { Entity, EntityKind, GraphData, Id } from './types';
+import { produce } from "immer";
+import { filter, map, not, some } from "shades";
+import { newId } from "./id";
+import type {
+  Appearance,
+  DiaryEntry,
+  Entity,
+  EntityKind,
+  GraphData,
+  Id,
+  Movie,
+} from "./types";
 
+interface GraphOptions {
+  data?: GraphData;
+  isCloning?: boolean;
+}
 export class Graph {
-  private data: GraphData = {
+  private _data: GraphData = {
     movies: {},
     actors: {},
-    appearances: []
+    appearances: [],
   };
 
-  constructor(data?: GraphData) {
+  constructor({ data, isCloning }: GraphOptions = {}) {
     if (data) {
-      this.data = data;
+      this._data = data;
+    }
+    if (!isCloning) {
+      // Normalize diary entries and entity names on construction.
+      this._data = produce(this._data, (draft) => {
+        for (const movie of Object.values(draft.movies)) {
+          movie.diary = normalizeDiary(movie.diary);
+        }
+      });
     }
   }
 
-  get movies() {
-    return this.data.movies;
+  get movies(): Readonly<Record<Id, Movie>> {
+    return this._data.movies;
   }
 
-  get actors() {
-    return this.data.actors;
+  get actors(): Readonly<Record<Id, Entity>> {
+    return this._data.actors;
   }
 
-  get appearances() {
-    return this.data.appearances;
+  get appearances(): ReadonlyArray<Appearance> {
+    return this._data.appearances;
   }
 
   findByName(kind: EntityKind, name?: string): Id | undefined {
     if (!name) return undefined;
     const target = name.trim().toLowerCase();
     return Object.values(
-      kind === 'movie' ? this.data.movies : this.data.actors
+      kind === "movie" ? this._data.movies : this._data.actors,
     ).find((e) => e.name.toLowerCase() === target)?.id;
   }
 
@@ -49,71 +70,79 @@ export class Graph {
     if (existing) return existing;
 
     const id = newId();
-    const key = kind === 'movie' ? 'movies' : 'actors';
-    this.data[key][id] = { id, name };
+    this._data = produce(this._data, (draft) => {
+      if (kind === "movie") {
+        draft.movies[id] = { id, name, diary: [] };
+      } else {
+        draft.actors[id] = { id, name };
+      }
+    });
     return id;
   }
 
   rename(kind: EntityKind, id: Id, name: string) {
-    const entity = this.data[kind === 'movie' ? 'movies' : 'actors'][id];
-    if (entity) {
-      entity.name = name;
-    }
+    this._data = produce(this._data, (draft) => {
+      const entity = draft[kind === "movie" ? "movies" : "actors"][id];
+      if (entity) {
+        entity.name = name;
+      }
+    });
   }
 
   delete(kind: EntityKind, id: Id) {
-    const key = kind === 'movie' ? 'movies' : 'actors';
-    delete this.data[key][id];
-    const matcher = kind === 'movie' ? { movieId: id } : { actorId: id };
-    this.data.appearances = filter(not(matcher))(this.data.appearances);
+    const key = kind === "movie" ? "movies" : "actors";
+    const matcher = kind === "movie" ? { movieId: id } : { actorId: id };
+    this._data = produce(this._data, (draft) => {
+      delete draft[key][id];
+      draft.appearances = filter(not(matcher))(draft.appearances);
+    });
   }
-
-  merge(other: Graph) {
-    this.data = mergeGraphs(this.data, other.data);
-    this.mergeAppearances(other.data);
-  }
-
-  mergeAppearances = (toMerge: GraphData) => {
-    for (const appearance of toMerge.appearances) {
-      const movie = toMerge.movies[appearance.movieId]!.name;
-      const actor = toMerge.actors[appearance.actorId]!.name;
-      this.linkByName(movie, actor);
-    }
-  };
 
   private hasAppearance = (movieId?: Id, actorId?: Id) =>
-    some({ movieId, actorId })(this.data.appearances);
+    some({ movieId, actorId })(this._data.appearances);
 
   hasAppearanceByName = (movie?: string, actor?: string) => {
     return this.hasAppearance(
-      this.findByName('movie', movie),
-      this.findByName('actor', actor)
+      this.findByName("movie", movie),
+      this.findByName("actor", actor),
     );
   };
 
   link(movieId: Id, actorId: Id) {
     if (!this.hasAppearance(movieId, actorId)) {
-      this.data.appearances.push({ movieId, actorId });
+      this._data = produce(this._data, (draft) => {
+        draft.appearances.push({ movieId, actorId });
+      });
     }
   }
 
-  private linkByName = (movie: string, actor: string) => {
-    const movieId = this.findByName('movie', movie);
-    const actorId = this.findByName('actor', actor);
-    if (movieId && actorId) this.link(movieId, actorId);
-  };
-
   unlink(movieId: Id, actorId: Id) {
-    this.data.appearances = filter(not({ movieId, actorId }))(
-      this.data.appearances
-    );
+    this._data = produce(this._data, (draft) => {
+      draft.appearances = filter(not({ movieId, actorId }))(draft.appearances);
+    });
+  }
+
+  setDiaryEntry(movieId: Id, date: string, text: string) {
+    this._data = produce(this._data, (draft) => {
+      const movie = draft.movies[movieId];
+      if (!movie) {
+        return;
+      }
+      const existing = movie.diary?.find((entry) => entry.date === date);
+      if (existing) {
+        existing.text = text;
+      } else {
+        movie.diary = movie.diary ?? [];
+        movie.diary.push({ date, text });
+      }
+    });
   }
 
   /** Ids of entities linked to `id` (the opposite kind). */
   relatedIds = (kind: EntityKind, id: Id): Id[] =>
-    kind === 'movie'
-      ? map('actorId')(filter({ movieId: id })(this.appearances))
-      : map('movieId')(filter({ actorId: id })(this.appearances));
+    kind === "movie"
+      ? map("actorId")(filter({ movieId: id })(this._data.appearances))
+      : map("movieId")(filter({ actorId: id })(this._data.appearances));
 
   /** Build movie-vs-movie edges (one per pair, listing every shared actor). */
   movieProjection = (): ProjectionEdge[] => {
@@ -169,35 +198,26 @@ export class Graph {
     return null;
   };
 
+  // Cheap "clone": Graph mutators always replace `_data` with a fresh
+  // immer-produced object (structural sharing, no deep copy), so wrapping
+  // the current `_data` in a new Graph gives an independent, stable
+  // snapshot without copying the whole graph.
+  clone(): Graph {
+    return new Graph({ data: this._data, isCloning: true });
+  }
+
   stringify() {
-    return JSON.stringify(this.data);
+    return JSON.stringify(this._data);
   }
 }
 
-const mergeGraphs = (fst: GraphData, snd: GraphData): GraphData => {
-  return {
-    movies: mergeMaps(fst.movies, snd.movies),
-    actors: mergeMaps(fst.actors, snd.actors),
-    appearances: fst.appearances
-  };
-};
-
-const mergeMaps = (
-  fst: Record<string, Entity>,
-  snd: Record<string, Entity>
-): Record<string, Entity> => {
-  const out = { ...fst };
-  const flipped = Object.fromEntries(
-    Object.entries(fst).map(([_, entity]) => [normalize(entity.name), entity])
-  );
-  for (const entity of Object.values(snd)) {
-    const existing = flipped[normalize(entity.name)];
-    if (!existing) {
-      out[entity.id] = entity;
-    }
-  }
-  return out;
-};
+const normalizeDiary = (diary: DiaryEntry[] | undefined): DiaryEntry[] =>
+  Array.isArray(diary)
+    ? diary.filter(
+        (entry) =>
+          typeof entry?.date === "string" && typeof entry.text === "string",
+      )
+    : [];
 
 const normalize = (s: string): string => s.toLowerCase().trim();
 
@@ -245,7 +265,7 @@ interface MovieLink {
 const reconstruct = (
   prev: Map<Id, MovieLink>,
   start: Id,
-  end: Id
+  end: Id,
 ): PathResult => {
   const movies: Id[] = [end];
   const actors: Id[] = [];
