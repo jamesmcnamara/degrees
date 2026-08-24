@@ -5,24 +5,21 @@
  * a new value and confirming yields `{ label }` with no id (caller creates it).
  */
 
-import { useEffect, useRef, useState } from "react";
-import type { Suggestion, SuggestionSource } from "@/lib/suggestions";
+import { useEffect, useRef, useState } from 'react';
+import type { Suggestion, SuggestionSource } from '@/lib/suggestions';
 
 interface AutocompleteProps {
   source: SuggestionSource;
   onPick: (suggestion: Suggestion) => void;
   placeholder?: string;
-  /** Clear the input after a pick (useful when adding to a list). */
-  clearOnPick?: boolean;
 }
 
 export function Autocomplete({
   source,
   onPick,
-  placeholder,
-  clearOnPick = true,
+  placeholder
 }: AutocompleteProps) {
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState('');
   const [items, setItems] = useState<Suggestion[]>([]);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
@@ -47,35 +44,35 @@ export function Autocomplete({
         setOpen(false);
       }
     };
-    document.addEventListener("pointerdown", onClickOutside);
-    return () => document.removeEventListener("pointerdown", onClickOutside);
+    document.addEventListener('pointerdown', onClickOutside);
+    return () => document.removeEventListener('pointerdown', onClickOutside);
   }, []);
 
   const trimmed = query.trim();
   const exactExists = items.some(
-    (i) => i.label.toLowerCase() === trimmed.toLowerCase(),
+    (i) => i.label.toLowerCase() === trimmed.toLowerCase()
   );
   const options: Suggestion[] =
     trimmed && !exactExists ? [...items, { label: trimmed }] : items;
 
   const pick = (suggestion: Suggestion) => {
     onPick(suggestion);
-    if (clearOnPick) setQuery("");
+    setQuery('');
     setOpen(false);
   };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "ArrowDown") {
+    if (e.key === 'ArrowDown') {
       e.preventDefault();
       setActive((a) => Math.min(a + 1, options.length - 1));
-    } else if (e.key === "ArrowUp") {
+    } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setActive((a) => Math.max(a - 1, 0));
-    } else if (e.key === "Enter") {
+    } else if (e.key === 'Enter') {
       e.preventDefault();
       const chosen = options[active];
       if (chosen) pick(chosen);
-    } else if (e.key === "Escape") {
+    } else if (e.key === 'Escape') {
       setOpen(false);
     }
   };
@@ -95,6 +92,7 @@ export function Autocomplete({
         onKeyDown={onKeyDown}
         autoComplete="off"
         autoCapitalize="words"
+        enterKeyHint="enter"
       />
       {open && options.length > 0 && (
         <ul className="autocomplete__list">
@@ -103,8 +101,8 @@ export function Autocomplete({
               <button
                 type="button"
                 className={
-                  "autocomplete__option" +
-                  (i === active ? " autocomplete__option--active" : "")
+                  'autocomplete__option' +
+                  (i === active ? ' autocomplete__option--active' : '')
                 }
                 onPointerEnter={() => setActive(i)}
                 onClick={() => pick(opt)}
