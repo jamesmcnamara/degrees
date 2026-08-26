@@ -673,6 +673,24 @@ button {
   resize: vertical;
 }
 
+/* --- settings ------------------------------------------------------------ */
+
+.settings__section h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+}
+
+.settings__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.settings__status {
+  font-weight: 600;
+}
+
 @media (prefers-reduced-motion) {
   * {
     animation: none !important;

@@ -18,7 +18,7 @@
  * the network forever and never reach the cache fallback.
  */
 
-const CACHE = 'six-degrees-v3';
+const CACHE = "six-degrees-v3";
 const NETWORK_TIMEOUT_MS = 5000;
 
 /** Fetch that rejects once `ms` elapses, aborting the in-flight request. */
@@ -26,15 +26,15 @@ const fetchWithTimeout = (request, ms = NETWORK_TIMEOUT_MS) => {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ms);
   return fetch(request, { signal: controller.signal }).finally(() =>
-    clearTimeout(timer)
+    clearTimeout(timer),
   );
 };
 const STATIC = [
-  '/',
-  '/manifest.json',
-  '/icon.svg',
-  '/icon-192.png',
-  '/icon-512.png'
+  "/",
+  "/manifest.json",
+  "/icon.svg",
+  "/icon-192.png",
+  "/icon-512.png",
 ];
 
 /** Find hashed asset URLs referenced in an HTML document. */
@@ -54,26 +54,26 @@ const precache = async (cache, url, cacheMode) => {
   }
 };
 
-self.addEventListener('install', (event) => {
+self.addEventListener("install", (event) => {
   event.waitUntil(
     (async () => {
       const cache = await caches.open(CACHE);
-      await Promise.all(STATIC.map((u) => precache(cache, u, 'reload')));
+      await Promise.all(STATIC.map((u) => precache(cache, u, "reload")));
       try {
         const res = await fetchWithTimeout(
-          new Request('/', { cache: 'reload' })
+          new Request("/", { cache: "reload" }),
         );
-        await cache.put('/', res.clone());
+        await cache.put("/", res.clone());
         await Promise.all(
           assetUrlsFrom(await res.text()).map((url) =>
-            precache(cache, url, 'reload')
-          )
+            precache(cache, url, "reload"),
+          ),
         );
       } catch {
         /* offline during install: runtime caching will fill in later */
       }
       await self.skipWaiting();
-    })()
+    })(),
   );
 });
 
@@ -81,50 +81,50 @@ self.addEventListener('install', (event) => {
 // This captures the exact asset graph the app actually used (HTML, JS, CSS,
 // fonts, icons) — including anything the install-time HTML parse couldn't see —
 // so the next visit works fully offline even with no server.
-self.addEventListener('message', (event) => {
+self.addEventListener("message", (event) => {
   const data = event.data;
-  if (!data || data.type !== 'cache-urls' || !Array.isArray(data.urls)) return;
+  if (!data || data.type !== "cache-urls" || !Array.isArray(data.urls)) return;
   event.waitUntil(
     (async () => {
       const cache = await caches.open(CACHE);
-      await Promise.all(data.urls.map((u) => precache(cache, u, 'no-cache')));
-    })()
+      await Promise.all(data.urls.map((u) => precache(cache, u, "no-cache")));
+    })(),
   );
 });
 
-self.addEventListener('activate', (event) => {
+self.addEventListener("activate", (event) => {
   event.waitUntil(
     (async () => {
       const keys = await caches.keys();
       await Promise.all(
-        keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))
+        keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)),
       );
       await self.clients.claim();
-    })()
+    })(),
   );
 });
 
-self.addEventListener('fetch', (event) => {
+self.addEventListener("fetch", (event) => {
   const { request } = event;
-  if (request.method !== 'GET') return;
+  if (request.method !== "GET") return;
   if (new URL(request.url).origin !== self.location.origin) return;
 
-  if (request.mode === 'navigate') {
+  if (request.mode === "navigate") {
     event.respondWith(
       (async () => {
         const cache = await caches.open(CACHE);
         try {
           const response = await fetchWithTimeout(request);
-          if (response.ok) cache.put('/', response.clone());
+          if (response.ok) cache.put("/", response.clone());
           return response;
         } catch {
           return (
-            (await cache.match('/')) ||
+            (await cache.match("/")) ||
             (await cache.match(request)) ||
             Response.error()
           );
         }
-      })()
+      })(),
     );
     return;
   }
@@ -142,7 +142,7 @@ self.addEventListener('fetch', (event) => {
             .then((response) => {
               if (response.ok) return cache.put(request, response.clone());
             })
-            .catch(() => {})
+            .catch(() => {}),
         );
         return cached;
       }
@@ -154,6 +154,6 @@ self.addEventListener('fetch', (event) => {
       } catch {
         return Response.error();
       }
-    })()
+    })(),
   );
 });

@@ -39,6 +39,17 @@ bun test     # unit tests for the graph logic
   graph onto movies (linked when they share an actor) and renders it with
   Cytoscape ([`MovieGraph`](src/components/MovieGraph.tsx)). Pick a start and end
   movie to highlight the shortest path and list the actor chain.
+- **Remote backup** — optional, opt-in backup of the localStorage blob to a
+  private GitHub Gist ([`src/lib/gist.ts`](src/lib/gist.ts),
+  [`src/lib/backup.ts`](src/lib/backup.ts)). Configure it from `/settings`
+  with a fine-grained personal access token scoped to **"Gists: read and
+  write"** and either an existing gist ID or let it create one. Backups run
+  automatically while the app is open and online (and can be triggered
+  manually), storing one file per month (`backup-YYYY-MM.json`) and skipping
+  the upload when nothing changed. A "Restore latest backup" button pulls
+  the newest file back down, e.g. onto a fresh device. The token is kept in
+  localStorage in plaintext, which is an acceptable trade-off for a personal
+  project but worth knowing.
 
 ## Routes
 
@@ -47,3 +58,4 @@ bun test     # unit tests for the graph logic
 - `/actor/:id`, `/actor/new` — actor form
 - `/diary` — all movie diary entries, newest first
 - `/graph` — the connection game
+- `/settings` — configure remote Gist backup, trigger manual backup/restore

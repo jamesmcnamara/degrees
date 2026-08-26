@@ -1,11 +1,11 @@
 /** Landing screen: jump into the game or manage movies and actors. */
 
-import { ENTITY_CONFIG } from '@/lib/entityConfig';
-import * as store from '@/lib/store';
-import { useGraph } from '@/lib/store';
-import type { EntityKind } from '@/lib/types';
-import { useState } from 'react';
-import { Link, useLocation } from 'wouter';
+import { ENTITY_CONFIG } from "@/lib/entityConfig";
+import * as store from "@/lib/store";
+import { useGraph } from "@/lib/store";
+import type { EntityKind } from "@/lib/types";
+import { useState } from "react";
+import { Link, useLocation } from "wouter";
 
 export function Home() {
   const data = useGraph();
