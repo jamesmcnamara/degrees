@@ -25,6 +25,7 @@ class GistError extends Error {
 const headers = (token: string): HeadersInit => ({
   Authorization: `Bearer ${token}`,
   Accept: "application/vnd.github+json",
+  "Content-Type": "application/json",
   "X-GitHub-Api-Version": "2022-11-28",
 });
 
@@ -49,8 +50,23 @@ export const getGist = async (token: string, gistId: string): Promise<Gist> => {
     headers: headers(token),
   });
   await assertOk(res);
-  const data = (await res.json()) as Gist;
-  return data;
+
+  const data = (await res.json()) as any;
+
+  // GitHub can omit/truncate `content` for larger files; fall back to `raw_url`.
+  await Promise.all(
+    Object.values(data.files ?? {}).map(async (file: any) => {
+      if (typeof file.content === "string") return;
+      if (!file.raw_url) {
+        throw new GistError("Gist file content missing (no raw_url)", 500);
+      }
+      const textRes = await fetch(file.raw_url, { headers: headers(token) });
+      await assertOk(textRes);
+      file.content = await textRes.text();
+    }),
+  );
+
+  return data as Gist;
 };
 
 /** Create a new secret gist containing the given files. */

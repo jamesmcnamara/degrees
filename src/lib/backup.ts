@@ -64,7 +64,7 @@ export function isBackupSettings(obj: unknown): obj is BackupSettings {
 const patchSettings = (
   patch: Partial<BackupSettings>,
 ): BackupSettings | null => {
-  const next = { ...loadSettings(), ...patch };
+  const next = { ...(loadSettings() ?? {}), ...patch };
   if (isBackupSettings(next)) {
     saveSettings(next);
     return next;
@@ -257,11 +257,12 @@ export const startAutoBackup = (): (() => void) => {
   window.addEventListener("online", onOnline);
 
   // Fire an initial opportunistic backup shortly after startup.
-  setTimeout(triggerBackup, 5000);
+  const startupTimer = setTimeout(triggerBackup, 5000);
 
   return () => {
     if (autoBackupTimer) clearInterval(autoBackupTimer);
     autoBackupTimer = null;
+    clearTimeout(startupTimer);
     document.removeEventListener("visibilitychange", onVisible);
     window.removeEventListener("online", onOnline);
   };

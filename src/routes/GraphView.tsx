@@ -56,7 +56,6 @@ export function GraphView() {
 
   const reset = () => {
     setStart(null);
-    setEnd(null);
     setWorkingGraph(null);
   };
 
