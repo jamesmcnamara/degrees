@@ -2,13 +2,12 @@
 
 import type { GraphData } from "./types";
 import { Graph } from "./graph";
-
-const KEY = "six-degrees:graph:v1";
+import { GRAPH_STORAGE_KEY } from "./constants";
 
 export const load = (): Graph => {
   if (typeof localStorage === "undefined") return new Graph();
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = localStorage.getItem(GRAPH_STORAGE_KEY);
     if (!raw) return new Graph();
     const parsed = JSON.parse(raw) as Partial<GraphData>;
     return new Graph({
@@ -25,5 +24,5 @@ export const load = (): Graph => {
 
 export const save = (graph: Graph): void => {
   if (typeof localStorage === "undefined") return;
-  localStorage.setItem(KEY, graph.stringify());
+  localStorage.setItem(GRAPH_STORAGE_KEY, graph.stringify());
 };

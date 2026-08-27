@@ -1,14 +1,19 @@
 import { Link, Route, Switch, useLocation } from "wouter";
+import { useEffect } from "react";
 import { Home } from "./routes/Home";
 import { GraphView } from "./routes/GraphView";
 import { Diary } from "./routes/Diary";
+import { Settings } from "./routes/Settings";
 import { EntityForm } from "./components/EntityForm";
 import { ENTITY_CONFIG } from "./lib/entityConfig";
 import * as store from "./lib/store";
+import { startAutoBackup } from "./lib/backup";
 import type { EntityKind, Id } from "./lib/types";
 import "./index.css";
 
 export function App() {
+  useEffect(startAutoBackup, []);
+
   return (
     <div className="shell">
       <Header />
@@ -17,6 +22,7 @@ export function App() {
           <Route path="/" component={Home} />
           <Route path="/diary" component={Diary} />
           <Route path="/graph" component={GraphView} />
+          <Route path="/settings" component={Settings} />
           <Route path="/movie/:id">
             {(p) => (
               <EntityForm key={`movie:${p.id}`} kind="movie" id={p.id!} />
@@ -72,6 +78,9 @@ function Header() {
           <Link href="/graph" className="appbar__action">
             Play
           </Link>
+          <Link href="/settings" className="appbar__action">
+            Settings
+          </Link>
         </nav>
       ) : entityRoute ? (
         <details className="appbar__menu">
@@ -112,6 +121,7 @@ const entityRouteFor = (location: string): EntityRoute | null => {
 const titleFor = (location: string): string => {
   if (location === "/graph") return "Connection";
   if (location === "/diary") return "Diary";
+  if (location === "/settings") return "Settings";
   for (const kind of ["movie", "actor"] as EntityKind[]) {
     if (location.startsWith(`/${kind}/`)) {
       const id = location.split("/")[2];

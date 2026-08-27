@@ -12,15 +12,12 @@ interface AutocompleteProps {
   source: SuggestionSource;
   onPick: (suggestion: Suggestion) => void;
   placeholder?: string;
-  /** Clear the input after a pick (useful when adding to a list). */
-  clearOnPick?: boolean;
 }
 
 export function Autocomplete({
   source,
   onPick,
   placeholder,
-  clearOnPick = true,
 }: AutocompleteProps) {
   const [query, setQuery] = useState("");
   const [items, setItems] = useState<Suggestion[]>([]);
@@ -60,7 +57,7 @@ export function Autocomplete({
 
   const pick = (suggestion: Suggestion) => {
     onPick(suggestion);
-    if (clearOnPick) setQuery("");
+    setQuery("");
     setOpen(false);
   };
 
@@ -95,6 +92,7 @@ export function Autocomplete({
         onKeyDown={onKeyDown}
         autoComplete="off"
         autoCapitalize="words"
+        enterKeyHint="enter"
       />
       {open && options.length > 0 && (
         <ul className="autocomplete__list">
