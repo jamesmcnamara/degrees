@@ -27,7 +27,7 @@ export function Settings() {
   const [status, setStatus] = useState<string | null>(null);
 
   const persist = (patch: Partial<BackupSettings>) => {
-    const next = { ...loadSettings(), ...patch };
+    const next = { ...(loadSettings() ?? {}), ...patch };
     if (isBackupSettings(next)) {
       saveSettings(next);
       setSettings(next);
