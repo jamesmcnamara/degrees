@@ -6,11 +6,11 @@
 import { useState } from "react";
 import {
   createBackupGist,
-  isBackupSettings,
+  isBackupConfigured,
   loadSettings,
   restoreLatestBackup,
   runBackup,
-  saveSettings,
+  saveBackupConfig,
   type BackupSettings,
 } from "@/lib/backup";
 
@@ -25,26 +25,28 @@ export function Settings() {
   );
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
+  const [saveFailed, setSaveFailed] = useState(false);
 
-  const persist = (patch: Partial<BackupSettings>) => {
-    const next = { ...(loadSettings() ?? {}), ...patch };
-    if (isBackupSettings(next)) {
-      saveSettings(next);
+  const handleConfigChange = (token: string, gistId: string) => {
+    try {
+      const next = saveBackupConfig({
+        token: token.trim(),
+        gistId: gistId.trim(),
+      });
       setSettings(next);
-    } else {
-      setStatus(`Invalid settings: ${JSON.stringify(next)}`);
+      setSaveFailed(false);
+      setStatus(null);
+    } catch {
+      setSaveFailed(true);
+      setStatus(
+        "Couldn't save settings in this browser. Your edit wasn't saved. Try editing again.",
+      );
     }
   };
 
-  const handleSaveConfig = (token: string, gistId: string) => {
-    persist({ token, gistId });
-    setStatus("Saved.");
-  };
-
-  const handleCreateGist = async (
-    token: string,
-    setGist: (id: string) => void,
-  ) => {
+  const handleCreateGist = async () => {
+    if (busy || saveFailed) return;
+    const token = settings?.token;
     if (!token) {
       setStatus("Enter a token first.");
       return;
@@ -52,8 +54,7 @@ export function Settings() {
     setBusy(true);
     setStatus(null);
     try {
-      const id = await createBackupGist(token);
-      setGist(id);
+      await createBackupGist(token);
       setSettings(loadSettings());
       setStatus("Created gist and backed up.");
     } catch (err) {
@@ -64,15 +65,22 @@ export function Settings() {
   };
 
   const handleBackupNow = async () => {
+    if (busy || saveFailed || !isBackupConfigured(settings)) return;
     setBusy(true);
     setStatus(null);
-    const result = await runBackup();
-    setSettings(loadSettings());
-    setBusy(false);
-    setStatus(prettyPrintBackupStatus(result.status));
+    try {
+      const result = await runBackup();
+      setSettings(loadSettings());
+      setStatus(result.message ?? prettyPrintBackupStatus(result.status));
+    } catch {
+      setStatus("Couldn't save backup status in this browser. Try again.");
+    } finally {
+      setBusy(false);
+    }
   };
 
   const handleRestore = async () => {
+    if (busy || saveFailed || !isBackupConfigured(settings)) return;
     if (
       !confirm(
         "Restore will overwrite all local data with the latest backup. Continue?",
@@ -99,7 +107,8 @@ export function Settings() {
       settings={settings}
       busy={busy}
       status={status}
-      handleSaveConfig={handleSaveConfig}
+      saveFailed={saveFailed}
+      handleConfigChange={handleConfigChange}
       handleCreateGist={handleCreateGist}
       handleBackupNow={handleBackupNow}
       handleRestore={handleRestore}
@@ -111,8 +120,9 @@ interface SettingsPresenterProps {
   settings: BackupSettings | null;
   busy: boolean;
   status: string | null;
-  handleSaveConfig(token: string, gistId: string): void;
-  handleCreateGist(token: string, setGist: (id: string) => void): void;
+  saveFailed: boolean;
+  handleConfigChange(token: string, gistId: string): void;
+  handleCreateGist(): void;
   handleBackupNow(): void;
   handleRestore(): void;
 }
@@ -121,13 +131,15 @@ function SettingsPresenter({
   settings,
   busy,
   status,
-  handleSaveConfig,
+  saveFailed,
+  handleConfigChange,
   handleCreateGist,
   handleBackupNow,
   handleRestore,
 }: SettingsPresenterProps) {
-  const [token, setToken] = useState(settings?.token ?? "");
-  const [gistId, setGistId] = useState(settings?.gistId ?? "");
+  const token = settings?.token ?? "";
+  const gistId = settings?.gistId ?? "";
+  const canRun = !busy && !saveFailed && isBackupConfigured(settings);
 
   return (
     <div className="settings">
@@ -139,6 +151,7 @@ function SettingsPresenter({
           &ldquo;Gists: read and write&rdquo; permission.
         </p>
         <p className="muted">
+          Settings save automatically in this browser.{" "}
           The token is stored in this browser&apos;s local storage, unencrypted.
           Only use a token scoped to gists.
         </p>
@@ -150,7 +163,8 @@ function SettingsPresenter({
             type="password"
             autoComplete="off"
             value={token}
-            onChange={(e) => setToken(e.target.value)}
+            onChange={(e) => handleConfigChange(e.target.value, gistId)}
+            disabled={busy}
             placeholder="github_pat_…"
           />
         </label>
@@ -162,26 +176,19 @@ function SettingsPresenter({
             type="text"
             autoComplete="off"
             value={gistId}
-            onChange={(e) => setGistId(e.target.value)}
+            onChange={(e) => handleConfigChange(token, e.target.value)}
+            disabled={busy}
             placeholder="Leave blank to create one"
           />
         </label>
 
         <div className="settings__actions">
-          <button
-            type="button"
-            className="btn btn--small"
-            onClick={() => handleSaveConfig(token, gistId)}
-            disabled={busy}
-          >
-            Save
-          </button>
           {!gistId && (
             <button
               type="button"
               className="btn btn--small"
-              onClick={() => handleCreateGist(token, setGistId)}
-              disabled={busy || !token}
+              onClick={handleCreateGist}
+              disabled={busy || saveFailed || !token.trim()}
             >
               Create gist
             </button>
@@ -190,7 +197,7 @@ function SettingsPresenter({
             type="button"
             className="btn btn--small"
             onClick={handleBackupNow}
-            disabled={busy || !settings?.gistId}
+            disabled={!canRun}
           >
             Back up now
           </button>
@@ -198,13 +205,15 @@ function SettingsPresenter({
             type="button"
             className="btn btn--small"
             onClick={handleRestore}
-            disabled={busy || !settings?.gistId}
+            disabled={!canRun}
           >
             Restore latest backup
           </button>
         </div>
 
-        {status && <p className="settings__status">{status}</p>}
+        {status && (
+          <p className="settings__status" role="status">{status}</p>
+        )}
 
         <p className="muted">
           Last backup: {formatTime(settings?.lastBackupAt)}

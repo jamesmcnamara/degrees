@@ -11,11 +11,10 @@
 import { get, maxBy } from "shades";
 import { GRAPH_STORAGE_KEY, SETTINGS_STORAGE_KEY } from "./constants";
 import {
-  createGist,
-  getGist,
-  updateGistFile,
+  type GistService,
   GistError,
   type GistFile,
+  ProdGistService,
 } from "./gist";
 
 const FILE_PREFIX = "backup-";
@@ -31,22 +30,36 @@ export interface BackupSettings {
   lastError?: string;
 }
 
-export const loadSettings = (): BackupSettings | null => {
-  if (typeof localStorage === "undefined") return null;
+export interface BackupDriver {
+  storage: Pick<Storage, "getItem" | "setItem">;
+  gist: GistService;
+  isOnline(): boolean;
+}
+
+export const prodDriver: BackupDriver = {
+  storage: localStorage,
+  gist: new ProdGistService(),
+  isOnline: () => navigator.onLine !== false,
+};
+
+export const loadSettings = (
+  driver: BackupDriver = prodDriver,
+): BackupSettings | null => {
   try {
-    const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
+    const raw = driver.storage.getItem(SETTINGS_STORAGE_KEY);
     if (!raw) return null;
-    const settings = JSON.parse(raw) as BackupSettings;
-    if (!settings.token || !settings.gistId) return null;
-    return settings;
+    const settings: unknown = JSON.parse(raw);
+    return isBackupSettings(settings) ? settings : null;
   } catch {
     return null;
   }
 };
 
-export const saveSettings = (settings: BackupSettings): void => {
-  if (typeof localStorage === "undefined") return;
-  localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+export const saveSettings = (
+  settings: BackupSettings,
+  driver: BackupDriver,
+): void => {
+  driver.storage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
 };
 
 export function isBackupSettings(obj: unknown): obj is BackupSettings {
@@ -61,15 +74,35 @@ export function isBackupSettings(obj: unknown): obj is BackupSettings {
   );
 }
 
+export const isBackupConfigured = (
+  settings: BackupSettings | null,
+): settings is BackupSettings =>
+  !!settings?.token.trim() && !!settings.gistId.trim();
+
+export const saveBackupConfig = (
+  config: Pick<BackupSettings, "token" | "gistId">,
+  driver: BackupDriver = prodDriver,
+): BackupSettings => {
+  const current = loadSettings(driver);
+  const next = {
+    ...(current?.gistId === config.gistId ? current : {}),
+    ...config,
+  };
+  saveSettings(next, driver);
+  return next;
+};
+
 const patchSettings = (
-  patch: Partial<BackupSettings>,
-): BackupSettings | null => {
-  const next = { ...(loadSettings() ?? {}), ...patch };
-  if (isBackupSettings(next)) {
-    saveSettings(next);
-    return next;
+  expected: BackupSettings,
+  patch: Partial<
+    Pick<BackupSettings, "lastBackupAt" | "lastBackupContent" | "lastError">
+  >,
+  driver: BackupDriver,
+): void => {
+  const current = loadSettings(driver);
+  if (current?.token === expected.token && current.gistId === expected.gistId) {
+    saveSettings({ ...current, ...patch }, driver);
   }
-  return null;
 };
 
 /** Format a Date as `YYYY-MM`. */
@@ -98,11 +131,13 @@ interface MonthlyGistFile extends GistFile {
 
 /** Find the most recent `backup-*.json` file in a gist's file list. */
 export const latestBackupFile = (
-  files: Record<string, GistFile>,
+  filesObj: Record<string, GistFile>,
 ): MonthlyGistFile | null => {
+  const files = Object.values(filesObj);
+  if (files.length === 0) return null;
   const best = get(
     maxBy((file: GistFile) => monthKeyFromFilename(file.filename)),
-  )(Object.values(files));
+  )(files);
 
   if (best) {
     return {
@@ -114,35 +149,35 @@ export const latestBackupFile = (
   return null;
 };
 
-const readLocalGraphJson = (): string | null => {
-  if (typeof localStorage === "undefined") return null;
-  return localStorage.getItem(GRAPH_STORAGE_KEY);
+const readLocalGraphJson = (driver: BackupDriver): string | null => {
+  return driver.storage.getItem(GRAPH_STORAGE_KEY);
 };
 
+type BackupStatus =
+  | "skipped-no-config"
+  | "skipped-offline"
+  | "skipped-unchanged"
+  | "backed-up"
+  | "error";
+
 export interface BackupResult {
-  status:
-    | "skipped-no-config"
-    | "skipped-offline"
-    | "skipped-unchanged"
-    | "backed-up"
-    | "error";
+  status: BackupStatus;
   message?: string;
 }
 
-const isOnline = (): boolean =>
-  typeof navigator === "undefined" || navigator.onLine !== false;
-
 /** Run a single backup pass: compare against remote, write only if changed. */
-export const runBackup = async (): Promise<BackupResult> => {
-  const settings = loadSettings();
-  if (!settings) {
+export const runBackup = async (
+  driver: BackupDriver = prodDriver,
+): Promise<BackupResult> => {
+  const settings = loadSettings(driver);
+  if (!isBackupConfigured(settings)) {
     return { status: "skipped-no-config" };
   }
-  if (!isOnline()) {
+  if (!driver.isOnline()) {
     return { status: "skipped-offline" };
   }
 
-  const content = readLocalGraphJson();
+  const content = readLocalGraphJson(driver);
   if (content == null) {
     return {
       status: "skipped-no-config",
@@ -151,14 +186,18 @@ export const runBackup = async (): Promise<BackupResult> => {
   }
 
   try {
-    const gist = await getGist(settings.token, settings.gistId);
+    const gist = await driver.gist.get(settings.token, settings.gistId);
     const latest = latestBackupFile(gist.files);
 
     if (latest && latest.content === content) {
-      patchSettings({
-        lastBackupAt: new Date().toISOString(),
-        lastError: undefined,
-      });
+      patchSettings(
+        settings,
+        {
+          lastBackupAt: new Date().toISOString(),
+          lastError: undefined,
+        },
+        driver,
+      );
       return { status: "skipped-unchanged" };
     }
 
@@ -169,34 +208,49 @@ export const runBackup = async (): Promise<BackupResult> => {
       latest && latest.key === currentMonth ? latest.key : currentMonth;
     const filename = filenameFor(targetKey);
 
-    await updateGistFile(settings.token, settings.gistId, filename, content);
-    patchSettings({
-      lastBackupAt: new Date().toISOString(),
-      lastBackupContent: content,
-      lastError: undefined,
-    });
+    await driver.gist.update(
+      settings.token,
+      settings.gistId,
+      filename,
+      content,
+    );
+    patchSettings(
+      settings,
+      {
+        lastBackupAt: new Date().toISOString(),
+        lastBackupContent: content,
+        lastError: undefined,
+      },
+      driver,
+    );
     return { status: "backed-up" };
   } catch (err) {
     const message = err instanceof GistError ? err.message : String(err);
-    patchSettings({ lastError: message });
+    patchSettings(settings, { lastError: message }, driver);
     return { status: "error", message };
   }
 };
 
 /** Create a new secret gist seeded with the current month's backup file. */
-export const createBackupGist = async (token: string): Promise<string> => {
-  const content = readLocalGraphJson() ?? "{}";
+export const createBackupGist = async (
+  token: string,
+  driver: BackupDriver = prodDriver,
+): Promise<string> => {
+  const content = readLocalGraphJson(driver) ?? "{}";
   const filename = filenameFor(monthKey(new Date()));
-  const gist = await createGist(token, "six-degrees backup", [
+  const gist = await driver.gist.create(token, "six-degrees backup", [
     { filename, content },
   ]);
-  patchSettings({
-    token,
-    gistId: gist.id,
-    lastBackupAt: new Date().toISOString(),
-    lastBackupContent: content,
-    lastError: undefined,
-  });
+  saveSettings(
+    {
+      token,
+      gistId: gist.id,
+      lastBackupAt: new Date().toISOString(),
+      lastBackupContent: content,
+      lastError: undefined,
+    },
+    driver,
+  );
   return gist.id;
 };
 
@@ -206,20 +260,20 @@ export interface RestoreResult {
 }
 
 /** Fetch the latest backup file from the gist and overwrite local storage. */
-export const restoreLatestBackup = async (): Promise<RestoreResult> => {
-  const settings = loadSettings();
-  if (!settings) {
+export const restoreLatestBackup = async (
+  driver: BackupDriver = prodDriver,
+): Promise<RestoreResult> => {
+  const settings = loadSettings(driver);
+  if (!isBackupConfigured(settings)) {
     return { status: "error", message: "Backup is not configured." };
   }
   try {
-    const gist = await getGist(settings.token, settings.gistId);
+    const gist = await driver.gist.get(settings.token, settings.gistId);
     const latest = latestBackupFile(gist.files);
     if (!latest) return { status: "no-backup" };
 
-    if (typeof localStorage !== "undefined") {
-      localStorage.setItem(GRAPH_STORAGE_KEY, latest.content);
-    }
-    patchSettings({ lastBackupContent: latest.content });
+    driver.storage.setItem(GRAPH_STORAGE_KEY, latest.content);
+    patchSettings(settings, { lastBackupContent: latest.content }, driver);
     return { status: "restored" };
   } catch (err) {
     const message = err instanceof GistError ? err.message : String(err);
@@ -227,14 +281,14 @@ export const restoreLatestBackup = async (): Promise<RestoreResult> => {
   }
 };
 
-let autoBackupTimer: ReturnType<typeof setInterval> | null = null;
+let autoBackupTimer: number | undefined;
 let lastRunAt = 0;
 
-const triggerBackup = (): void => {
+const triggerBackup = (driver: BackupDriver): void => {
   const now = Date.now();
   if (now - lastRunAt < MIN_RUN_GAP_MS) return;
   lastRunAt = now;
-  void runBackup();
+  void runBackup(driver);
 };
 
 /**
@@ -242,16 +296,17 @@ const triggerBackup = (): void => {
  * runs when the tab becomes visible or the browser regains connectivity.
  * Safe to call once at app startup; returns a stop function.
  */
-export const startAutoBackup = (): (() => void) => {
-  if (typeof window === "undefined") return () => {};
+export const startAutoBackup = (
+  driver: BackupDriver = prodDriver,
+): (() => void) => {
   if (autoBackupTimer) clearInterval(autoBackupTimer);
 
   autoBackupTimer = setInterval(triggerBackup, AUTO_BACKUP_INTERVAL_MS);
 
   const onVisible = () => {
-    if (document.visibilityState === "visible") triggerBackup();
+    if (document.visibilityState === "visible") triggerBackup(driver);
   };
-  const onOnline = () => triggerBackup();
+  const onOnline = () => triggerBackup(driver);
 
   document.addEventListener("visibilitychange", onVisible);
   window.addEventListener("online", onOnline);
@@ -261,7 +316,7 @@ export const startAutoBackup = (): (() => void) => {
 
   return () => {
     if (autoBackupTimer) clearInterval(autoBackupTimer);
-    autoBackupTimer = null;
+    autoBackupTimer = undefined;
     clearTimeout(startupTimer);
     document.removeEventListener("visibilitychange", onVisible);
     window.removeEventListener("online", onOnline);

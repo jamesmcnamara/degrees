@@ -61,22 +61,6 @@ export function Autocomplete({
     setOpen(false);
   };
 
-  const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setActive((a) => Math.min(a + 1, options.length - 1));
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setActive((a) => Math.max(a - 1, 0));
-    } else if (e.key === "Enter") {
-      e.preventDefault();
-      const chosen = options[active];
-      if (chosen) pick(chosen);
-    } else if (e.key === "Escape") {
-      setOpen(false);
-    }
-  };
-
   return (
     <div className="autocomplete" ref={boxRef}>
       <input
@@ -89,12 +73,11 @@ export function Autocomplete({
           setOpen(true);
         }}
         onFocus={() => setOpen(true)}
-        onKeyDown={onKeyDown}
         autoComplete="off"
         autoCapitalize="words"
         enterKeyHint="enter"
       />
-      {open && options.length > 0 && (
+      {open && query && options.length > 0 && (
         <ul className="autocomplete__list">
           {options.map((opt, i) => (
             <li key={opt.id ?? `new:${opt.label}`}>

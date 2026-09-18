@@ -8,11 +8,13 @@ import { EntityForm } from "./components/EntityForm";
 import { ENTITY_CONFIG } from "./lib/entityConfig";
 import * as store from "./lib/store";
 import { startAutoBackup } from "./lib/backup";
+import { useScrollToTopOnFocus } from "./lib/useScrollToTopOnFocus";
 import type { EntityKind, Id } from "./lib/types";
 import "./index.css";
 
 export function App() {
   useEffect(startAutoBackup, []);
+  useScrollToTopOnFocus();
 
   return (
     <div className="shell">

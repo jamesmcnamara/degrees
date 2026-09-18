@@ -32,42 +32,41 @@ export function EntityForm({ kind, id }: EntityFormProps) {
   const collection = kind === "movie" ? graph.movies : graph.actors;
   const entity = id === "new" ? undefined : collection[id];
 
-  // The subject is created lazily on first link / first save.
-  const [subjectId, setSubjectId] = useState<Id | null>(
-    id === "new" ? null : id,
-  );
+  // The entity is created lazily on first link / first save.
+  const [entityId, setEntityId] = useState<Id | null>(id === "new" ? null : id);
   const [name, setName] = useState(entity?.name ?? "");
 
-  const links = subjectId ? graph.relatedIds(kind, subjectId) : [];
-  const linkedSet = useMemo(() => new Set(links), [links.join(",")]);
+  // Exclude (actors|movies) already linked to this (movie|actor) from autocomplete
+  const featured = entityId ? graph.relatedIds(kind, entityId) : [];
+  const excluded = useMemo(() => new Set(featured), [featured.join(",")]);
 
   const source = useMemo(
-    () => localSource(graph, related, linkedSet),
-    [graph, related, linkedSet],
+    () => localSource(graph, related, excluded),
+    [graph, related, excluded],
   );
 
-  /** Ensure the subject node exists, returning its id. */
-  const ensureSubject = (): Id | null => {
+  // Get or create this entities Id
+  const ensureEntity = (): Id | null => {
     const trimmed = name.trim();
-    if (subjectId) {
+    if (entityId) {
       if (entity && entity.name !== trimmed && trimmed) {
-        store.renameEntity(kind, subjectId, trimmed);
+        store.renameEntity(kind, entityId, trimmed);
       }
-      return subjectId;
+      return entityId;
     }
     if (!trimmed) return null;
     const created = store.upsertEntity(kind, trimmed);
-    setSubjectId(created);
+    setEntityId(created);
     navigate(config.path(created), { replace: true });
     return created;
   };
 
   const onNameBlur = () => {
-    if (name.trim()) ensureSubject();
+    if (name.trim()) ensureEntity();
   };
 
   const addRelated = (suggestion: Suggestion) => {
-    const owner = ensureSubject();
+    const owner = ensureEntity();
     if (!owner) return;
     const relatedId =
       suggestion.id ?? store.upsertEntity(related, suggestion.label);
@@ -76,9 +75,9 @@ export function EntityForm({ kind, id }: EntityFormProps) {
   };
 
   const removeRelated = (relatedId: Id) => {
-    if (!subjectId) return;
-    if (kind === "movie") store.unlinkAppearance(subjectId, relatedId);
-    else store.unlinkAppearance(relatedId, subjectId);
+    if (!entityId) return;
+    if (kind === "movie") store.unlinkAppearance(entityId, relatedId);
+    else store.unlinkAppearance(relatedId, entityId);
   };
 
   return (
@@ -100,9 +99,9 @@ export function EntityForm({ kind, id }: EntityFormProps) {
       <section className="related">
         <h2 className="related__heading">{config.relatedHeading}</h2>
 
-        {links.length > 0 ? (
+        {featured.length > 0 ? (
           <ul className="chips">
-            {links.map((relatedId) => {
+            {featured.map((relatedId) => {
               const relatedEntity =
                 related === "movie"
                   ? graph.movies[relatedId]
@@ -142,9 +141,9 @@ export function EntityForm({ kind, id }: EntityFormProps) {
 
       {kind === "movie" && (
         <MovieDiaryEditor
-          movieId={subjectId}
+          movieId={entityId}
           movieName={name}
-          ensureMovie={ensureSubject}
+          ensureMovie={ensureEntity}
         />
       )}
     </div>
