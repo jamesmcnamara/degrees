@@ -72,37 +72,70 @@ function Header() {
           ‹ <span>{title}</span>
         </button>
       )}
-      {atRoot ? (
-        <nav className="appbar__actions">
-          <Link href="/diary" className="appbar__action">
-            Diary
-          </Link>
-          <Link href="/graph" className="appbar__action">
-            Play
-          </Link>
-          <Link href="/settings" className="appbar__action">
-            Settings
-          </Link>
-        </nav>
-      ) : entityRoute ? (
-        <details className="appbar__menu">
-          <summary className="appbar__menu-toggle" aria-label="Open menu">
-            ⋮
-          </summary>
-          <div className="appbar__menu-panel">
-            <button
-              type="button"
-              className="appbar__menu-action appbar__menu-action--danger"
-              onClick={removeSubject}
-            >
-              Delete {ENTITY_CONFIG[entityRoute.kind].noun}
-            </button>
-          </div>
-        </details>
-      ) : null}
+      {(() => {
+        switch (true) {
+          case atRoot:
+            return <RootBar />;
+          case !!entityRoute:
+            return (
+              <EntityBar
+                noun={ENTITY_CONFIG[entityRoute.kind].noun}
+                removeSubject={removeSubject}
+              />
+            );
+          case location === "/diary":
+            return <DiaryBar />;
+          default:
+            return null;
+        }
+      })()}
     </header>
   );
 }
+
+const RootBar = () => (
+  <nav className="appbar__actions">
+    <Link href="/diary" className="appbar__action">
+      Diary
+    </Link>
+    <Link href="/graph" className="appbar__action">
+      Play
+    </Link>
+    <Link href="/settings" className="appbar__action">
+      Settings
+    </Link>
+  </nav>
+);
+
+interface EntityBarProps {
+  noun: string;
+  removeSubject(): void;
+}
+
+const EntityBar = ({ noun, removeSubject }: EntityBarProps) => (
+  <details className="appbar__menu">
+    <summary className="appbar__menu-toggle" aria-label="Open menu">
+      ⋮
+    </summary>
+    <div className="appbar__menu-panel">
+      <button
+        type="button"
+        className="appbar__menu-action appbar__menu-action--danger"
+        onClick={removeSubject}
+      >
+        Delete {noun}
+      </button>
+    </div>
+  </details>
+);
+
+const DiaryBar = () => (
+  <nav className="appbar__actions">
+    <Link href="/movie/new" className="appbar__action">
+      Add New
+    </Link>
+  </nav>
+);
 
 interface EntityRoute {
   kind: EntityKind;
