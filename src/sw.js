@@ -54,24 +54,28 @@ const precache = async (cache, url, cacheMode) => {
   }
 };
 
+/** Fetch the latest shell ("/") and the hashed bundles it references. */
+const cacheShell = async () => {
+  const cache = await caches.open(CACHE);
+  try {
+    const res = await fetchWithTimeout(new Request("/", { cache: "reload" }));
+    if (!res.ok) return;
+    const urls = assetUrlsFrom(await res.clone().text());
+    // Cache the bundles before the HTML that points at them, so the cached
+    // shell never references assets that aren't cached yet.
+    await Promise.all(urls.map((url) => precache(cache, url, "reload")));
+    await cache.put("/", res);
+  } catch {
+    /* offline: keep whatever shell we already have */
+  }
+};
+
 self.addEventListener("install", (event) => {
   event.waitUntil(
     (async () => {
       const cache = await caches.open(CACHE);
       await Promise.all(STATIC.map((u) => precache(cache, u, "reload")));
-      try {
-        const res = await fetchWithTimeout(
-          new Request("/", { cache: "reload" }),
-        );
-        await cache.put("/", res.clone());
-        await Promise.all(
-          assetUrlsFrom(await res.text()).map((url) =>
-            precache(cache, url, "reload"),
-          ),
-        );
-      } catch {
-        /* offline during install: runtime caching will fill in later */
-      }
+      await cacheShell();
       await self.skipWaiting();
     })(),
   );
@@ -83,6 +87,11 @@ self.addEventListener("install", (event) => {
 // so the next visit works fully offline even with no server.
 self.addEventListener("message", (event) => {
   const data = event.data;
+  // Sent after a hot update: the running page is newer than the cached shell.
+  if (data?.type === "refresh-shell") {
+    event.waitUntil(cacheShell());
+    return;
+  }
   if (!data || data.type !== "cache-urls" || !Array.isArray(data.urls)) return;
   event.waitUntil(
     (async () => {
@@ -115,7 +124,7 @@ self.addEventListener("fetch", (event) => {
         const cache = await caches.open(CACHE);
         try {
           const response = await fetchWithTimeout(request);
-          if (response.ok) cache.put("/", response.clone());
+          if (response.ok) event.waitUntil(cache.put("/", response.clone()));
           return response;
         } catch {
           return (
@@ -149,7 +158,7 @@ self.addEventListener("fetch", (event) => {
 
       try {
         const response = await fetchWithTimeout(request);
-        if (response.ok) cache.put(request, response.clone());
+        if (response.ok) event.waitUntil(cache.put(request, response.clone()));
         return response;
       } catch {
         return Response.error();

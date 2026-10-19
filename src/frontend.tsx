@@ -69,4 +69,11 @@ if ("serviceWorker" in navigator) {
       precacheLoaded,
     );
   });
+
+  // In dev, hot updates change the running app without a navigation, so the
+  // service worker's cached shell would fall behind. Ask it to re-cache.
+  const refreshShell = () =>
+    navigator.serviceWorker.controller?.postMessage({ type: "refresh-shell" });
+  import.meta.hot.on("bun:afterUpdate", refreshShell);
+  import.meta.hot.on("bun:ws:connect", refreshShell);
 }
