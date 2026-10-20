@@ -2,6 +2,7 @@ import { serve } from "bun";
 import { existsSync } from "node:fs";
 import index from "./index.html";
 import manifest from "./manifest.json";
+import { startDevProxy } from "./lib/devProxy";
 
 const asset = (name: string, type: string) =>
   new Response(Bun.file(new URL(`./${name}`, import.meta.url)), {
@@ -14,13 +15,16 @@ const asset = (name: string, type: string) =>
 const certPath = new URL("../certs/cert.pem", import.meta.url);
 const keyPath = new URL("../certs/key.pem", import.meta.url);
 const hasCerts = existsSync(certPath) && existsSync(keyPath);
+const devHost = process.env.DEV_HOST;
+const proxyDevelopment = process.env.NODE_ENV !== "production" && !!devHost;
+const tls = hasCerts
+  ? { cert: Bun.file(certPath), key: Bun.file(keyPath) }
+  : undefined;
 
-const server = serve({
-  hostname: "0.0.0.0",
-  port: 3001,
-  ...(hasCerts && {
-    tls: { cert: Bun.file(certPath), key: Bun.file(keyPath) },
-  }),
+const appServer = serve({
+  hostname: proxyDevelopment ? "127.0.0.1" : "0.0.0.0",
+  port: proxyDevelopment ? 0 : 3001,
+  tls: proxyDevelopment ? undefined : tls,
   routes: {
     // Service worker must be served from the root scope.
     "/sw.js": () => asset("sw.js", "text/javascript"),
@@ -42,8 +46,14 @@ const server = serve({
   },
 });
 
+const server = proxyDevelopment && devHost
+  ? startDevProxy(appServer.url, devHost, 3001, tls)
+  : appServer;
 const scheme = hasCerts ? "https" : "http";
-console.log(`🚀 Server running at ${server.url}`);
+const address = proxyDevelopment
+  ? `${scheme}://${devHost}:${server.port}/`
+  : server.url.href;
+console.log(`🚀 Server running at ${address}`);
 console.log(`   On your network: ${scheme}://<this-machine-ip>:${server.port}`);
 if (!hasCerts) {
   console.log(

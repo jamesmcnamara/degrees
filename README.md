@@ -13,10 +13,32 @@ installable PWA.
 
 ```bash
 bun install
-bun dev      # http://localhost:3000 with hot reload
+bun dev      # http://localhost:3001 with hot reload
 bun start    # production server
 bun test     # unit tests for the graph logic
 ```
+
+### Development on your phone
+
+For HTTPS and service worker support, generate a certificate covering the
+hostname you open on your phone, then start the server with that hostname:
+
+```bash
+bun run cert p0wd43vp2t.local
+DEV_HOST=p0wd43vp2t.local bun dev
+```
+
+Open `https://p0wd43vp2t.local:3001` on your phone. Replace the hostname in
+both commands with your computer's network name. The certificate must be
+trusted on your phone.
+
+Bun's dev server rejects unconfigured hostnames to prevent DNS rebinding.
+With `DEV_HOST`, a development proxy listens on all IPv4 interfaces and accepts
+that hostname, localhost, and IP addresses. It forwards requests and hot-reload
+WebSockets to Bun on loopback. This avoids binding the public server to the
+hostname itself, which can resolve to loopback on the development computer.
+Without it, the server listens on all IPv4 interfaces directly; use your
+computer's LAN IP address instead of a hostname.
 
 ## How it works
 

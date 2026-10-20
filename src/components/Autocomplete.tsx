@@ -73,6 +73,20 @@ export function Autocomplete({
           setOpen(true);
         }}
         onFocus={() => setOpen(true)}
+        onKeyDown={(e) => {
+          if (
+            e.key !== "Enter" ||
+            e.nativeEvent.isComposing ||
+            e.nativeEvent.keyCode === 229 ||
+            !open ||
+            !trimmed
+          ) {
+            return;
+          }
+          e.preventDefault();
+          const suggestion = options[active] ?? options[0];
+          if (suggestion) pick(suggestion);
+        }}
         autoComplete="off"
         autoCapitalize="words"
         enterKeyHint="enter"
@@ -88,6 +102,7 @@ export function Autocomplete({
                   (i === active ? " autocomplete__option--active" : "")
                 }
                 onPointerEnter={() => setActive(i)}
+                onPointerDown={(e) => e.preventDefault()}
                 onClick={() => pick(opt)}
               >
                 {opt.id ? (

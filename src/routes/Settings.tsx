@@ -143,6 +143,7 @@ function SettingsPresenter({
 
   return (
     <div className="settings">
+      goddman farts
       <section className="settings__section">
         <h2>Remote backup</h2>
         <p className="muted">
@@ -151,9 +152,9 @@ function SettingsPresenter({
           &ldquo;Gists: read and write&rdquo; permission.
         </p>
         <p className="muted">
-          Settings save automatically in this browser.{" "}
-          The token is stored in this browser&apos;s local storage, unencrypted.
-          Only use a token scoped to gists.
+          Settings save automatically in this browser. The token is stored in
+          this browser&apos;s local storage, unencrypted. Only use a token
+          scoped to gists.
         </p>
 
         <label className="field">
@@ -212,7 +213,9 @@ function SettingsPresenter({
         </div>
 
         {status && (
-          <p className="settings__status" role="status">{status}</p>
+          <p className="settings__status" role="status">
+            {status}
+          </p>
         )}
 
         <p className="muted">

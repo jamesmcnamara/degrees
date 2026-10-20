@@ -9,6 +9,8 @@
  * At runtime:
  *  - Navigations: network-first with a timeout, falling back to the cached shell
  *    ("/") so client-side routes work offline.
+ *  - Bun development assets: network-first, since their URLs can stay the same
+ *    while their contents change.
  *  - Other same-origin GETs: stale-while-revalidate (instant from cache, freshen
  *    in the background).
  *
@@ -116,19 +118,23 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET") return;
-  if (new URL(request.url).origin !== self.location.origin) return;
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return;
 
-  if (request.mode === "navigate") {
+  const navigation = request.mode === "navigate";
+  if (navigation || url.pathname.startsWith("/_bun/")) {
     event.respondWith(
       (async () => {
         const cache = await caches.open(CACHE);
         try {
           const response = await fetchWithTimeout(request);
-          if (response.ok) event.waitUntil(cache.put("/", response.clone()));
+          if (response.ok) {
+            event.waitUntil(cache.put(navigation ? "/" : request, response.clone()));
+          }
           return response;
         } catch {
           return (
-            (await cache.match("/")) ||
+            (navigation && (await cache.match("/"))) ||
             (await cache.match(request)) ||
             Response.error()
           );

@@ -26,6 +26,10 @@
   box-sizing: border-box;
 }
 
+html {
+  scroll-padding-top: max(35dvh, calc(env(safe-area-inset-top) + 1.5rem));
+}
+
 html,
 body {
   margin: 0;
@@ -162,6 +166,10 @@ button {
   flex: 1;
   padding: 1rem;
   padding-bottom: calc(env(safe-area-inset-bottom) + 2rem);
+}
+
+.content:has(input:focus, textarea:focus, [contenteditable="true"]:focus) {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 2rem + 65dvh);
 }
 
 /* --- buttons / chips --------------------------------------------------- */
@@ -484,7 +492,7 @@ button {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-  max-height: 250px;
+  max-height: min(250px, max(3rem, calc(65dvh - 5rem)));
   overflow-y: auto;
 }
 
